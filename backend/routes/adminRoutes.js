@@ -1,14 +1,16 @@
 const express = require('express');
 const router = express.Router();
+const { authenticate, isAdmin } = require('../middleware/authMiddleware');
 const adminController = require('../controllers/adminController');
 
 // Add a middleware for admin
 
+// --- APPLY SECURITY TO ALL ADMIN ROUTES ---
+router.use(authenticate, isAdmin); 
 // --- USER MANAGEMENT (C.R.U.D.) ---
 
 //POST /api/admin/users
 //Create a new User (Member/Trainer/Admin)
-
 router.post('/users', adminController.createUser);
 
 // GET /api/admin/users
@@ -22,6 +24,7 @@ router.put('/users/:id', adminController.updateUser);
 // DELETE /api/admin/users/:id
 // Delete a User
 router.delete('/users/:id', adminController.deleteUser);
+
 
 
 // --- PLAN MANAGEMENT (C.R.U.D.) ---
@@ -45,6 +48,7 @@ router.delete('/plans/:id', adminController.deletePlan);
 // POST /api/admin/trainers
 //Create a new Trainer Profile
 router.post('/trainer', adminController.createTrainerProfile);
+//router.post('/trainers', adminController.createTrainerProfile);
 
 // GET /api/admin/trainers
 // Read all Trainers (Profiles + User Data)

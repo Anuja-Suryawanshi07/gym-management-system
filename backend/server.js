@@ -1,18 +1,28 @@
 const express = require('express');
-const adminRoutes = require('./routes/adminRoutes');
-const db = require('./config/db');
-require('dotenv').config();
 const app = express();
+require('dotenv').config();
+const db = require('./config/db');
 const PORT = process.env.PORT || 7000;
+const adminRoutes = require('./routes/adminRoutes');
+const authRoutes = require('./routes/authRoutes');
 
 //Middleware to parse JSON bodies
 app.use(express.json());
+
+
+// Middleware to parse URL-encoded form data
+app.use(express.urlencoded({ extended: true }));
+
+// Public Authentication routes (Login)
+app.use('/api/auth', authRoutes);
 
 // --- TEST ROUTE: Fetch all users from a table ---
 
 // --- ROUTES ---
 // Admin routes for managing users, plans, etc.
 app.use('/api/admin', adminRoutes);
+
+
 
 app.get('/api/users', async (req , res) => {
     try {

@@ -137,6 +137,7 @@ exports.updateUser = async (req, res) => {
 
 exports.deleteUser = async (req, res) => {
   const { id } = req.params;
+  console.log('Attempting to delete user ID:', id);
   try {
     //Deleting from users table will automatically delete related records
     // in user_roles,member_profiles,trcener_profiles, etc., due to ON DELETE CASCADE
