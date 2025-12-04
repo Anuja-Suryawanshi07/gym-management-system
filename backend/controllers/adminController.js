@@ -2,6 +2,45 @@ const db = require("../config/db");
 const bcrypt = require("bcrypt");
 const SALT_ROUNDS = 10;
 
+// Function for a route protected by ONLY 'authenticate'
+exports.getAdminProfile = (req, res) => {
+    // req.user contains the decoded JWT payload (id, email, role)
+    res.status(200).json({
+        message: 'Welcome to your profile!',
+        user: req.user,
+        access: 'Authentication successful.'
+    });
+};
+
+// Function for a route protected by 'authenticate' AND 'isAdmin'
+exports.getAllUsers = async (req, res) => {
+    // You would put your database query here: db.execute('SELECT * FROM users')
+    
+    res.status(200).json({
+        message: 'Admin successfully accessed all user data.',
+        user_accessing: req.user, // Confirms the admin user's identity
+        data: [] // Placeholder for actual user data from DB
+    });
+};
+
+// Placeholder for creating a plan
+exports.createPlan = (req, res) => {
+    // ... logic to insert a new plan into the database
+    res.status(201).json({ 
+        message: 'Plan created successfully.',
+        plan_details: req.body // Just echoing the data received
+    });
+};
+
+// Placeholder for deleting a user
+exports.deleteUser = (req, res) => {
+    // ... logic to delete the user by req.params.id
+    res.status(200).json({ 
+        message: `User with ID ${req.params.id} deleted.`,
+        user_accessing: req.user
+    });
+};
+
 // --- 1. CREATE USER ---
 exports.createUser = async (req, res) => {
   const { full_name, email, password, phone, gender, dob, address, role_name } =
