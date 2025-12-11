@@ -38,3 +38,20 @@ exports.isAdmin = (req, res, next) => {
         return res.status(403).json({ message: 'Forbidden. Admin access required.' });
     }
 };
+// Middleware to check if the user is an Trainer
+exports.isTrainer = (req, res, next) => {
+    if (req.user && req.user.role === 'Trainer') {
+        next();
+    } else {
+        return res.status(403).json({ message: 'Forbidden. Trainer access required.'});
+    }
+};
+
+// Middleware to check if the user is an Member
+exports.isMember = (req, res, next) => {
+    if (req.user && req.user.role === 'Member') {
+        next();
+    } else {
+        return res.status(403).json({ message: 'Forbidden. Member access required.'});
+    }
+};

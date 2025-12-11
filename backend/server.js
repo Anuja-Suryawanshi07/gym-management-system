@@ -4,6 +4,8 @@ require('dotenv').config();
 const db = require('./config/db');
 const PORT = process.env.PORT || 7000;
 const adminRoutes = require('./routes/adminRoutes');
+const trainerRoutes = require('./routes/trainerRoutes');
+const memberRoutes = require('./routes/memberRoutes');
 const authRoutes = require('./routes/authRoutes');
 
 //Middleware to parse JSON bodies
@@ -22,6 +24,11 @@ app.use('/api/auth', authRoutes);
 // Admin routes for managing users, plans, etc.
 app.use('/api/admin', adminRoutes);
 
+// Trainer routes
+app.use('/api/trainer', trainerRoutes);
+
+// member routes
+app.use('/api/member', memberRoutes);
 
 
 app.get('/api/users', async (req , res) => {

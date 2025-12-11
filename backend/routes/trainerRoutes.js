@@ -8,7 +8,7 @@ router.use(authenticate);
 
 // --- TRAINER SELF-MANAGEMENT ---
 
-// GET /api/trainer/profile - Get Trainer's own profile and stats
+// GET /api/trainer/profile - Get Trainer's own profile 
 router.get('/profile', trainerController.getTrainerProfile);
 
 // GET /api/trainer/members - Get a list of members assgined to this trainer

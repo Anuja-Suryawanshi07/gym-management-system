@@ -21,7 +21,7 @@ router.post('/users', adminController.createUser);
 router.get('/users', adminController.getAllUsers);
 
 // GET /api/admin/users/:id - Read a single User
-//router.get('/users/:id', adminController.getUserById);
+router.get('/users/:id', adminController.getUserById);
 
 // PUT /api/admin/users/:id - Update User details
 router.put('/users/:id', adminController.updateUser);
@@ -37,7 +37,7 @@ router.post('/plans',adminController.createPlan);
 router.get('/plans', adminController.getAllPlans);
 
 // GET /api/admin/plans/:id - Read a single Plan
-//router.get('/plans/:id', adminController.getPlanById);
+router.get('/plans/:id', adminController.getPlanById);
 
 //PUT /api/admin/plans/:id - Update Plan details
 router.put('/plans/:id', adminController.updatePlan);
@@ -54,7 +54,7 @@ router.post('/trainer', adminController.createTrainerProfile);
 router.get('/trainers', adminController.getAllTrainers);
 
 // GET /api/admin/trainers/:user_id - Read a single Trainer
-//router.get('/trainers/:user_id', adminController.getTrainerById);
+router.get('/trainers/:user_id', adminController.getTrainerById);
 
 //PUT / api/admin/trainers/:user_id - Update Trainer Profile details
 router.put('/trainers/:user_id', adminController.updateTrainerProfile);
@@ -70,13 +70,21 @@ router.post('/members', adminController.createMemberProfile);
 router.get('/members',adminController.getAllMembers);
 
 // GET /api/admin/members/:user_id - Read a single Member
-//router.get('/members/:user_id', adminController.getMemberById);
+router.get('/members/:user_id', adminController.getMemberById);
 
 //PUT /api/admin/members/:user_id - //Update Member Profile details
 router.put('/members/:user_id', adminController.updateMemberProfile);
 
 //DELETE /api/admin/members/:user_id - //DELETE a Member Profile(user remains)
 router.delete('/members/:user_id', adminController.deleteMemberProfile);
+
+// --- ADMIN SELF-MANAGEMENT ---
+// GET /api/admin/profile - Get Admin's own user profile
+router.get('/profile', adminController.getAdminProfile);
+
+// --- MEMBER MANAGEMENT ---
+// PUT /api/admin/member/:memberId/profile - Update a specific member's profile (plans, trainer, goals)
+router.put('/member/:memberId/profile', adminController.updateMemberProfile);
 
 
 module.exports = router;
