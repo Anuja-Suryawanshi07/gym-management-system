@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { authenticate } = require('../middleware/authMiddleware');
+const { authenticate, isTrainer } = require('../middleware/authMiddleware');
 const trainerController = require('../controllers/trainerController');
 
 // All Trainer routes require authenticatin
-router.use(authenticate);
+router.use(authenticate, isTrainer);
 
 // --- TRAINER SELF-MANAGEMENT ---
 

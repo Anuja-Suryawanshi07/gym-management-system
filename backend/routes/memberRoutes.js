@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { authenticate } = require('../middleware/authMiddleware');
+const { authenticate, isMember } = require('../middleware/authMiddleware');
 const memberController = require('../controllers/memberController');
 
 // All Member routes require authentication
-router.use(authenticate);
+router.use(authenticate, isMember);
 
 // --- MEMBER SELF-MANAGEMENT ---
 
@@ -19,5 +19,11 @@ router.get('/plan', memberController.getMemberPlan);
 
 // POST /api/member/renew - Initiate a plan renewal process
 router.post('/renew', memberController.initiateRenewal);
+
+// 5. GET /api/member/payments - Fetch payment history
+router.get('/payments', memberController.getMemberPayments);
+
+// 6. GET /api/member/sessions - Fetch scheduled sessions
+router.get('/sessions', memberController.getMemberSessions);
 
 module.exports = router;
