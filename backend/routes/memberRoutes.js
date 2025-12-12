@@ -12,12 +12,12 @@ router.use(authenticate);
 router.get('/profile', memberController.getMemberProfile);
 
 // GET /api/member/attendance - Get member's attendance history
-router.get('/attendance', memberController.getAttendanceHistory);
+router.get('/attendance', memberController.getMemberAttendance);
 
 // GET /api/member/plan - Get details of the member's current plan
-router.get('/plan', memberController.getCurrentPlan);
+router.get('/plan', memberController.getMemberPlan);
 
 // POST /api/member/renew - Initiate a plan renewal process
 router.post('/renew', memberController.initiateRenewal);
 
-modules.exports = router;
+module.exports = router;
