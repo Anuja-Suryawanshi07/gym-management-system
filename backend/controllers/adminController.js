@@ -1,32 +1,49 @@
 const db = require("../config/db");
 const bcrypt = require("bcrypt");
-// const SALT_ROUNDS = 10; // Declaring here but using the value 10 directly in hash functions
 
 // =======================================================
 // CORE ADMIN API ENDPOINTS (Protected by authenticate, isAdmin)
 // =======================================================
 
-// --- 1. GET ADMIN PROFILE (Simple Test Route) ---
-exports.getAdminProfile = (req, res) => {
-    // This route is typically used for the admin to fetch their own detailed profile data.
-    // However, as a simple test:
-    res.status(200).json({
-        message: 'Welcome to your profile!',
-        user: req.user, // Decoded JWT payload
-    });
+// --- 1. GET ADMIN PROFILE (Self-Access) ---
+// Route: GET /api/admin/profile
+exports.getAdminProfile = async (req, res) => {
+    // This function fetches the currently authenticated Admin's user data
+    try {
+        const [rows] = await db.execute(
+            "SELECT id, full_name, email, phone, gender, dob, address, role FROM users WHERE id = ?",
+            [req.user.id] // req.user.id is set by the authentication middleware
+        );
+
+        if (rows.length === 0) {
+            return res.status(404).json({ message: "Admin user not found." });
+        }
+        res.status(200).json({
+            message: "Admin profile fetched successfully.",
+            profile: rows[0]
+        });
+    } catch (error) {
+        console.error("Error fetching admin profile:", error);
+        res.status(500).json({ message: "Server error while retrieving profile data." });
+    }
 };
 
-// --- 2. CREATE USER (Transaction Logic: User + Role) ---
+// --- 2. CREATE USER (REFАCTORED: Uses users.role ENUM) ---
 // Route: POST /api/admin/users
 exports.createUser = async (req, res) => {
-    const { full_name, email, phone, gender, dob, address, password, role_name } =
+    // role is now the ENUM value: 'admin', 'member', or 'trainer'
+    const { full_name, email, phone, gender, dob, address, password, role } =
         req.body;
 
     // 1. Basic validation
-    if (!full_name || !email || !password || !role_name) {
+    if (!full_name || !email || !password || !role) {
         return res.status(400).json({
-            message: "Missing required fields: full_name, email, password, role_name.",
+            message: "Missing required fields: full_name, email, password, and role ('member', 'trainer', or 'admin').",
         });
+    }
+
+    if (!['member', 'trainer', 'admin'].includes(role)) {
+         return res.status(400).json({ message: "Invalid role specified. Must be 'member', 'trainer', or 'admin'." });
     }
 
     let connection;
@@ -37,71 +54,43 @@ exports.createUser = async (req, res) => {
             return res.status(409).json({ message: "User with this email already exists." });
         }
 
-        connection = await db.getConnection();
-        await connection.beginTransaction();
-
         // 2. Hash Password
-        const password_hash = await bcrypt.hash(password, 10); // Using 10 directly
+        const password_hash = await bcrypt.hash(password, 10);
 
-        // 3. Insert into users table
-        const [userResult] = await connection.execute(
-            "INSERT INTO users (full_name, email, phone, gender, dob, address, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            [full_name, email, phone, gender, dob, address, password_hash]
+        // 3. Insert into users table, including the role directly
+        const [userResult] = await db.execute(
+            "INSERT INTO users (full_name, email, phone, gender, dob, address, password_hash, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            [full_name, email, phone, gender, dob, address, password_hash, role]
         );
         const newUserId = userResult.insertId;
 
-        // 4. Assign the role -- Find the role ID
-        const [roleRows] = await connection.execute(
-            "SELECT id FROM roles WHERE role_name = ?",
-            [role_name]
-        );
-        if (roleRows.length === 0) {
-            // It's crucial to rollback here as the user insertion succeeded
-            await connection.rollback(); 
-            return res.status(400).json({ message: `Invalid role specified: ${role_name}.` });
-        }
-        const roleId = roleRows[0].id;
-
-        // Assign role to user
-        await connection.execute(
-            "INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)",
-            [newUserId, roleId]
-        );
-
-        // 5. Commit transaction
-        await connection.commit();
+        // Note: We no longer need to use a transaction or the user_roles table.
 
         res.status(201).json({
-            message: "User created successfully with role assignment.",
+            message: `User created successfully with role: ${role}.`,
             userId: newUserId,
-            role: role_name
+            role: role
         });
     } catch (error) {
-        if (connection) await connection.rollback();
+        // NOTE: The previous logic relied on transactions which are now simplified.
         console.error("Error creating user:", error);
         res.status(500).json({
             message: "Server error during user creation.",
             error: error.message
         });
-    } finally {
-        if (connection) connection.release();
     }
 };
 
-// --- 3. READ ALL USERS (with Roles) ---
+// --- 3. READ ALL USERS (REFАCTORED: Uses users.role ENUM) ---
 // Route: GET /api/admin/users
 exports.getAllUsers = async (req, res) => {
     try {
-        // Query to join users and role tables
+        // Query to select all users and their single role from the 'users' table
         const [rows] = await db.query(`
             SELECT 
-            u.id, u.full_name, u.email, u.phone, u.gender, u.dob, u.address,
-            GROUP_CONCAT(r.role_name) AS roles
-            FROM users u
-            JOIN user_roles ur ON u.id = ur.user_id
-            JOIN roles r ON ur.role_id = r.id
-            GROUP BY u.id
-            ORDER BY u.id DESC
+            id, full_name, email, phone, gender, dob, address, role
+            FROM users
+            ORDER BY id DESC
         `);
         res.status(200).json({ users: rows });
     } catch (error) {
@@ -120,7 +109,7 @@ exports.getUserById = async (req, res) => {
     try {
         // Query the database for a single user (excluding password hash)
         const [rows] = await db.execute(
-            'SELECT id, full_name, email, phone, gender, dob, address, created_at, updated_at FROM users WHERE id = ?', [userId]
+            'SELECT id, full_name, email, phone, gender, dob, address, role, created_at, updated_at FROM users WHERE id = ?', [userId]
         );
 
         if (rows.length === 0) {
@@ -137,20 +126,20 @@ exports.getUserById = async (req, res) => {
     }
 };
 
-// --- 5. UPDATE USER DETAILS ---
+// --- 5. UPDATE USER DETAILS (REFАCTORED: Uses users.role ENUM) ---
 // Route: PUT /api/admin/users/:id
 exports.updateUser = async (req, res) => {
     const { id } = req.params;
-    const { password, role_name } = req.body; // Separate out role and password for custom handling
+    const { password, role } = req.body; // 'role' is now the ENUM value
 
     let updateFields = { ...req.body };
     delete updateFields.password;
-    delete updateFields.role_name; 
+    delete updateFields.role; // Remove role for special handling
 
     let query = "UPDATE users SET ";
     const queryParams = [];
 
-    // Dynamically build the query based on fields provided (excluding password and role_name)
+    // Dynamically build the query based on fields provided
     for (const key in updateFields) {
         if (updateFields[key] !== undefined && updateFields[key] !== null) {
             query += `${key} = ?, `;
@@ -164,43 +153,29 @@ exports.updateUser = async (req, res) => {
         query += "password_hash = ?, ";
         queryParams.push(password_hash);
     }
+
+    // Handle role update separately (if provided and valid)
+    if (role !== undefined) {
+         if (!['member', 'trainer', 'admin'].includes(role)) {
+             return res.status(400).json({ message: "Invalid role specified. Must be 'member', 'trainer', or 'admin'." });
+         }
+         query += "role = ?, ";
+         queryParams.push(role);
+    }
     
     // Check if any fields are provided for the 'users' table update
-    if (queryParams.length === 0 && !role_name) {
+    if (queryParams.length === 0) {
         return res.status(400).json({ message: "No fields provided for update." });
     }
 
-    let connection;
+    // Execute the 'users' table update (no transaction needed now)
+    let finalUserQuery = query.slice(0, -2) + " WHERE id = ?";
+    queryParams.push(id);
+
     try {
-        connection = await db.getConnection();
-        await connection.beginTransaction();
+        const [result] = await db.execute(finalUserQuery, queryParams);
 
-        // 1. Execute 'users' table update
-        let affectedRows = 0;
-        if (queryParams.length > 0) {
-            // Remove the trailing comma and space, add WHERE clause
-            let finalUserQuery = query.slice(0, -2) + " WHERE id = ?";
-            const [userResult] = await connection.execute(finalUserQuery, [...queryParams, id]);
-            affectedRows = userResult.affectedRows;
-        }
-
-        // 2. Update Role (if provided)
-        if (role_name) {
-            const [roleRow] = await connection.execute('SELECT id FROM roles WHERE role_name = ?', [role_name]);
-            if (roleRow.length === 0) {
-                await connection.rollback();
-                return res.status(400).json({ message: `Invalid role specified: ${role_name}.` });
-            }
-            const newRoleId = roleRow[0].id;
-            
-            // Assuming one role per user:
-            const [roleUpdateResult] = await connection.execute('UPDATE user_roles SET role_id = ? WHERE user_id = ?', [newRoleId, id]);
-            affectedRows += roleUpdateResult.affectedRows; // Track total changes
-        }
-
-        await connection.commit();
-        
-        if (affectedRows === 0) {
+        if (result.affectedRows === 0) {
             // Check if the user exists but no fields changed
             const [userCheck] = await db.execute("SELECT id FROM users WHERE id = ?", [id]);
             if (userCheck.length === 0) {
@@ -211,11 +186,8 @@ exports.updateUser = async (req, res) => {
 
         res.status(200).json({ message: "User updated successfully." });
     } catch (error) {
-        if (connection) await connection.rollback();
         console.error("Error updating user:", error);
         res.status(500).json({ message: "Error updating user", error: error.message });
-    } finally {
-        if (connection) connection.release();
     }
 };
 
@@ -225,10 +197,9 @@ exports.deleteUser = async (req, res) => {
     const { id } = req.params;
     
     try {
-        // You correctly rely on database ON DELETE CASCADE, which is the best practice!
+        // Deleting from users should cascade delete through all related tables (member_profiles, trainer_profiles, etc.)
         const [result] = await db.execute("DELETE FROM users WHERE id = ?", [id]);
         
-        // Fix: Typo corrected (result.affectedRoos -> result.affectedRows)
         if (result.affectedRows === 0) { 
             return res.status(404).json({ message: "User not found." });
         }
@@ -245,13 +216,12 @@ exports.deleteUser = async (req, res) => {
 };
 
 // =======================================================
-// PLAN MANAGEMENT API ENDPOINTS
+// PLAN MANAGEMENT API ENDPOINTS (CRUD)
 // =======================================================
 
 // --- 7. CREATE PLAN ---
 // Route: POST /api/admin/plans
 exports.createPlan = async (req, res) => {
-    // Standardizing variable names to match SQL schema (plan_name -> name)
     const { plan_name, duration_months, price, description, status } = req.body;
 
     if (!plan_name || !duration_months || !price) {
@@ -398,7 +368,7 @@ exports.deletePlan = async (req, res) => {
 
 
 // =======================================================
-// TRAINER PROFILE API ENDPOINTS
+// TRAINER PROFILE MANAGEMENT API ENDPOINTS (CRUD)
 // =======================================================
 
 // --- 12. CREATE TRAINER PROFILE ---
@@ -410,6 +380,7 @@ exports.createTrainerProfile = async (req, res) => {
         experience_years,
         certification_details,
         status,
+        schedule, // Added schedule to creation, though it's typically updated separately
     } = req.body;
 
     if (!user_id || !specialty) {
@@ -420,13 +391,14 @@ exports.createTrainerProfile = async (req, res) => {
 
     try {
         const [result] = await db.execute(
-            "INSERT INTO trainer_profiles (user_id, specialty, experience_years, certification_details, status) VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO trainer_profiles (user_id, specialty, experience_years, certification_details, status, schedule) VALUES (?, ?, ?, ?, ?, ?)",
             [
                 user_id,
                 specialty,
                 experience_years,
                 certification_details,
                 status || "active",
+                schedule || '{"mon": "9am-5pm", "tue": "9am-5pm", "wed": "9am-5pm", "thu": "9am-5pm", "fri": "9am-5pm"}'
             ]
         );
         res.status(201).json({
@@ -453,11 +425,13 @@ exports.getAllTrainers = async (req, res) => {
     try {
         const [rows] = await db.query(`
             SELECT
-            u.id AS user_id, u.full_name, u.email, u.phone, tp.id AS profile_id, tp.specialty, tp.experience_years, tp.certification_details, tp.status
+            u.id AS user_id, u.full_name, u.email, u.phone, tp.id AS profile_id, tp.specialty, tp.experience_years, tp.certification_details, tp.status, tp.schedule
             FROM users u
             JOIN trainer_profiles tp ON u.id = tp.user_id
+            WHERE u.role = 'trainer'
             ORDER BY u.id DESC
         `);
+        // Note: The schedule field is returned as a string and may need client-side parsing.
         res.status(200).json({ trainers: rows });
     } catch (error) {
         console.error("Error fetching trainers:", error);
@@ -470,7 +444,6 @@ exports.getAllTrainers = async (req, res) => {
 // --- 14. GET TRAINER BY ID ---
 // Route: GET /api/admin/trainers/:user_id
 exports.getTrainerById = async (req, res) => {
-    // FIX: Corrected typo from req.parms.user_id to req.params.user_id
     const trainerUserId = req.params.user_id;
 
     try {
@@ -483,10 +456,11 @@ exports.getTrainerById = async (req, res) => {
             tp.specialty,
             tp.experience_years,
             tp.certification_details,
-            tp.status
+            tp.status,
+            tp.schedule
             FROM users u
             JOIN trainer_profiles tp ON u.id = tp.user_id
-            WHERE u.id = ?
+            WHERE u.id = ? AND u.role = 'trainer'
         `, [trainerUserId]
         );
         if (rows.length === 0) {
@@ -506,7 +480,7 @@ exports.getTrainerById = async (req, res) => {
 // Route: PUT /api/admin/trainers/:user_id
 exports.updateTrainerProfile = async (req, res) => {
     const { user_id } = req.params;
-    const { specialty, experience_years, certification_details, status } =
+    const { specialty, experience_years, certification_details, status, schedule } =
         req.body;
 
     let query = "UPDATE trainer_profiles SET ";
@@ -516,6 +490,7 @@ exports.updateTrainerProfile = async (req, res) => {
         experience_years,
         certification_details,
         status,
+        schedule
     };
 
     // Build query dynamically
@@ -537,7 +512,7 @@ exports.updateTrainerProfile = async (req, res) => {
         const [result] = await db.execute(query, queryParams);
 
         if (result.affectedRows === 0) {
-            // Better 404 check: check if profile exists first
+            // Check for 404
             const [profileCheck] = await db.execute("SELECT user_id FROM trainer_profiles WHERE user_id = ?", [user_id]);
             if (profileCheck.length === 0) {
                 return res.status(404).json({ message: "Trainer profile not found." });
@@ -569,7 +544,6 @@ exports.deleteTrainerProfile = async (req, res) => {
         }
         res.status(200).json({ message: "Trainer profile deleted successfully." });
     } catch (error) {
-        // You might want to add a check for ER_ROW_IS_REFERENCED_2 if any members are assigned to this trainer
         console.error("Error deleting trainer profile:", error);
         res.status(500).json({
             message: "Error deleting trainer profile",
@@ -579,7 +553,7 @@ exports.deleteTrainerProfile = async (req, res) => {
 };
 
 // =======================================================
-// MEMBER PROFILE API ENDPOINTS
+// MEMBER PROFILE MANAGEMENT API ENDPOINTS (CRUD)
 // =======================================================
 
 // --- 17. CREATE MEMBER PROFILE ---
@@ -591,22 +565,24 @@ exports.createMemberProfile = async (req, res) => {
         membership_start,
         membership_end,
         health_details,
+        current_plan_id // Added plan ID
     } = req.body;
 
-    if (!user_id || !membership_start || !membership_end) {
+    if (!user_id || !membership_start || !membership_end || !current_plan_id) {
         return res.status(400).json({
-            message: "Missing required fields: user_id, membership_start, membership_end.",
+            message: "Missing required fields: user_id, membership_start, membership_end, and current_plan_id.",
         });
     }
     try {
         const [result] = await db.execute(
-            "INSERT INTO member_profiles (user_id, trainer_id, membership_start, membership_end, health_details) VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO member_profiles (user_id, trainer_id, membership_start, membership_end, health_details, current_plan_id) VALUES (?, ?, ?, ?, ?, ?)",
             [
                 user_id,
                 trainer_id || null,
                 membership_start,
                 membership_end,
                 health_details,
+                current_plan_id
             ]
         );
         res.status(201).json({
@@ -619,7 +595,7 @@ exports.createMemberProfile = async (req, res) => {
                 message: "Member profile already exists for this user ID.",
             });
         }
-        // You should also check for ER_NO_REFERENCED_ROW_2 if trainer_id or user_id don't exist
+        // You should also check for ER_NO_REFERENCED_ROW_2 if trainer_id, user_id, or current_plan_id don't exist
         console.error("Error creating member profile:", error);
         res.status(500).json({
             message: "Error creating member profile",
@@ -628,7 +604,7 @@ exports.createMemberProfile = async (req, res) => {
     }
 };
 
-// --- 18. READ ALL MEMBERS (JOINED with users and Assigned Trainer) ---
+// --- 18. READ ALL MEMBERS (JOINED with users, Trainer, and Plan) ---
 // Route: GET /api/admin/members
 exports.getAllMembers = async (req, res) => {
     try {
@@ -636,10 +612,13 @@ exports.getAllMembers = async (req, res) => {
             SELECT 
             u.id AS user_id, u.full_name, u.email, u.phone,
             mp.membership_start, mp.membership_end, mp.health_details,
-            t.full_name AS assigned_trainer_name
+            t.full_name AS assigned_trainer_name,
+            p.plan_name AS current_plan_name
             FROM users u
             JOIN member_profiles mp ON u.id = mp.user_id
             LEFT JOIN users t ON mp.trainer_id = t.id
+            LEFT JOIN plans p ON mp.current_plan_id = p.id
+            WHERE u.role = 'member'
             ORDER BY u.id DESC
         `);
         res.status(200).json({ members: rows });
@@ -665,10 +644,11 @@ exports.getMemberById = async (req, res) => {
             mp.trainer_id,
             mp.membership_start,
             mp.membership_end,
-            mp.health_details
+            mp.health_details,
+            mp.current_plan_id
             FROM users u
             JOIN member_profiles mp ON u.id = mp.user_id
-            WHERE u.id = ?`,
+            WHERE u.id = ? AND u.role = 'member'`,
             [memberUserId]
         );
         if (rows.length === 0) {
@@ -684,11 +664,12 @@ exports.getMemberById = async (req, res) => {
     }
 };
 
-// --- 20. UPDATE MEMBER PROFILE ---
+// --- 20. UPDATE MEMBER PROFILE (Admin Management) ---
 // Route: PUT /api/admin/members/:user_id
+// Uses the best version of this function found in the provided code
 exports.updateMemberProfile = async (req, res) => {
-    const { user_id } = req.params;
-    const { trainer_id, membership_start, membership_end, health_details } =
+    const user_id = req.params.user_id;
+    const { trainer_id, membership_start, membership_end, health_details, current_plan_id } =
         req.body;
 
     let query = " UPDATE member_profiles SET ";
@@ -698,13 +679,13 @@ exports.updateMemberProfile = async (req, res) => {
         membership_start,
         membership_end,
         health_details,
+        current_plan_id // Added
     };
 
     // Build query dynamically
     for (const key in fields) {
-        if (fields[key] !== undefined) {
-            // FIX: If trainer_id is explicitly set to null (or 0), we should allow it.
-            // Assuming trainer_id is only pushed if defined. If defined but null, SQL will handle it.
+        // Ensure field is defined, allowing explicit null updates (e.g., trainer_id: null)
+        if (fields[key] !== undefined) { 
             query += `${key} = ?, `;
             queryParams.push(fields[key]);
         }
@@ -746,6 +727,7 @@ exports.deleteMemberProfile = async (req, res) => {
     const { user_id } = req.params;
     try {
         const [result] = await db.execute(
+            // NOTE: This deletes only the profile, the base user remains. Use DELETE /api/admin/users/:id to delete both.
             "DELETE FROM member_profiles WHERE user_id = ?",
             [user_id]
         );
@@ -762,89 +744,120 @@ exports.deleteMemberProfile = async (req, res) => {
             .json({ message: "Error deleting member profile", error: error.message });
     }
 };
-// --- 1. GET ADMIN PROFILE (Self-Access) ---
-// Route: GET /api/admin/profile
-exports.getAdminProfile = async (req, res) => {
-    // This function fetches the currently authenticated Admin's user data
-    try {
-        const [rows] = await db.execute(
-            "SELECT id, full_name, email, phone, gender, dob, address FROM users WHERE id = ?",
-            [req.user.id] // req.user.id is set by the authentication middleware
-        );
 
-        if (rows.length === 0) {
-            return res.status(404).json({ message: "Admin user not found." });
-        }
-        res.status(200).json({
-            message: "Admin profile fetched successfully.",
-            profile: rows[0]
+// =======================================================
+// SESSION MANAGEMENT API ENDPOINTS (CRUD)
+// =======================================================
+
+// --- 22. CREATE SESSION ---
+// Route: POST /api/admin/sessions
+exports.createSession = async (req, res) => {
+    const { member_id, trainer_id, session_time, duration_minutes, notes } = req.body;
+
+    if (!member_id || !trainer_id || !session_time || !duration_minutes) {
+        return res.status(400).json({
+            message: "Missing required fields: member_id, trainer_id, session_time, and duration_minutes.",
+        });
+    }
+
+    try {
+        const [result] = await db.execute(
+            "INSERT INTO sessions (member_id, trainer_id, session_time, duration_minutes, status, notes) VALUES (?, ?, ?, ?, ?, ?)",
+            [member_id, trainer_id, session_time, duration_minutes, 'scheduled', notes || null]
+        );
+        res.status(201).json({
+            message: "Session scheduled successfully",
+            sessionId: result.insertId,
         });
     } catch (error) {
-        console.error("Error fetching admin profile:", error);
-        res.status(500).json({ message: "Server error while retrieving profile data." });
+        // You might want to check for foreign key errors (member_id or trainer_id invalid)
+        console.error("Error creating session:", error);
+        res.status(500).json({
+            message: "Error scheduling session",
+            error: error.message,
+        });
     }
 };
 
-// --- 2. UPDATE MEMBER PROFILE (Admin Management) ---
-// Route: PUT /api/admin/member/:memberId/profile
-exports.updateMemberProfile = async (req, res) => {
-    const memberId = req.params.memberId;
-    const updateData = req.body;
-    
-    // Define the list of fields allowed to be updated in the member_profiles table
-    const allowedFields = [
-        'membership_status', 
-        'health_goals', 
-        'membership_start_date', 
-        'membership_end_date', 
-        'current_plan_id', 
-        'assigned_trainer_id'
-    ];
-    
-    const fieldsToUpdate = [];
-    const values = [];
+// --- 23. READ ALL SESSIONS ---
+// Route: GET /api/admin/sessions
+exports.getAllSessions = async (req, res) => {
+    try {
+        const [rows] = await db.query(`
+            SELECT 
+                s.id AS session_id,
+                s.session_time,
+                s.duration_minutes,
+                s.status,
+                s.notes,
+                m.full_name AS member_name,
+                t.full_name AS trainer_name
+            FROM sessions s
+            JOIN users m ON s.member_id = m.id AND m.role = 'member'
+            JOIN users t ON s.trainer_id = t.id AND t.role = 'trainer'
+            ORDER BY s.session_time DESC
+        `);
+        res.status(200).json({ sessions: rows });
+    } catch (error) {
+        console.error("Error fetching all sessions:", error);
+        res.status(500).json({ message: "Error fetching sessions", error: error.message });
+    }
+};
 
-    // Dynamically build the SET part of the SQL query to handle partial updates
-    for (const field of allowedFields) {
-        if (updateData[field] !== undefined) {
-            fieldsToUpdate.push(`${field} = ?`);
-            // Handle null values explicitly for DB columns that allow it
-            values.push(updateData[field] === null ? null : updateData[field]);
+// --- 24. UPDATE SESSION ---
+// Route: PUT /api/admin/sessions/:id
+exports.updateSession = async (req, res) => {
+    const { id } = req.params;
+    const { session_time, duration_minutes, status, notes, trainer_id } = req.body;
+
+    let query = "UPDATE sessions SET ";
+    const queryParams = [];
+    const fields = { session_time, duration_minutes, status, notes, trainer_id };
+
+    for (const key in fields) {
+        if (fields[key] !== undefined) {
+            query += `${key} = ?, `;
+            queryParams.push(fields[key]);
         }
     }
 
-    if (fieldsToUpdate.length === 0) {
-        return res.status(400).json({ message: "No valid fields provided for update." });
+    if (queryParams.length === 0) {
+        return res.status(400).json({ message: "No fields provided for update." });
     }
 
-    // Add the member ID to the end of the values array for the WHERE clause
-    values.push(memberId);
-    
+    query = query.slice(0, -2) + " WHERE id = ?";
+    queryParams.push(id);
+
     try {
-        // Construct the final SQL query
-        const sql = `UPDATE member_profiles SET ${fieldsToUpdate.join(', ')} WHERE user_id = ?`;
-        
-        const [result] = await db.execute(sql, values);
+        const [result] = await db.execute(query, queryParams);
 
         if (result.affectedRows === 0) {
-            // Check if the member profile exists but no change was needed
-            const [check] = await db.execute("SELECT 1 FROM member_profiles WHERE user_id = ?", [memberId]);
-            if (check.length === 0) {
-                return res.status(404).json({ message: "Member profile not found." });
+            const [sessionCheck] = await db.execute("SELECT id FROM sessions WHERE id = ?", [id]);
+            if (sessionCheck.length === 0) {
+                return res.status(404).json({ message: "Session not found." });
             }
-            return res.status(200).json({ message: "Member profile found, but no new changes were applied." });
+            return res.status(200).json({ message: "Session details already up-to-date, no changes made." });
         }
-        
-        res.status(200).json({
-            message: `Member ID ${memberId} profile updated successfully.`,
-            updatedFields: updateData
-        });
-
+        res.status(200).json({ message: "Session updated successfully." });
     } catch (error) {
-        console.error("Error updating member profile by Admin:", error);
-        res.status(500).json({
-            message: "Server error during member profile update.",
-            error: error.message
-        });
+        console.error("Error updating session:", error);
+        res.status(500).json({ message: "Error updating session", error: error.message });
+    }
+};
+
+// --- 25. DELETE SESSION ---
+// Route: DELETE /api/admin/sessions/:id
+exports.deleteSession = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const [result] = await db.execute("DELETE FROM sessions WHERE id = ?", [id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: "Session not found." });
+        }
+        res.status(200).json({ message: "Session deleted successfully." });
+    } catch (error) {
+        console.error("Error deleting session:", error);
+        res.status(500).json({ message: "Error deleting session", error: error.message });
     }
 };

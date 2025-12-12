@@ -129,7 +129,7 @@ exports.getMemberPlan = async (req, res) => {
     try {
         // First, find the current plan ID from the member_profiles table
         const [memberProfile] = await db.execute(
-            "SELECT current_plan_id FROM member_profiles WHERE user_id = ?",
+            "SELECT current_plan_id, membership_start_date, membership_end_date FROM member_profiles WHERE user_id = ?",
             [memberUserId]
         );
 
@@ -138,6 +138,7 @@ exports.getMemberPlan = async (req, res) => {
         }
 
         const planId = memberProfile[0].current_plan_id;
+        const { membership_start_date, membership_end_date } = memberProfile[0];
 
         // Then, fetch the full plan details
         const [planDetails] = await db.execute(
@@ -148,10 +149,17 @@ exports.getMemberPlan = async (req, res) => {
         if (planDetails.length === 0) {
             return res.status(404).json({ message: "Plan details not found (Plan ID exists but record is missing)." });
         }
+        
+        // Combine plan details with enrollment dates from the member_profiles table
+        const finalPlanDetails = {
+            ...planDetails[0],
+            membership_start_date: membership_start_date,
+            membership_end_date: membership_end_date
+        };
 
         res.status(200).json({
             message: "Current membership plan fetched successfully.",
-            plan: planDetails[0]
+            plan: finalPlanDetails
         });
 
     } catch (error) {
@@ -165,10 +173,11 @@ exports.getMemberPlan = async (req, res) => {
 
 // --- 4. INITIATE PLAN RENEWAL (Self-Access) ---
 // Route: POST /api/member/renew
-// In a real app, this would be the final step after a payment gateway confirms success.
+// This simulates the successful confirmation of a renewal payment.
 exports.initiateRenewal = async (req, res) => {
     const memberUserId = req.user.id;
-
+    // For simplicity, we assume the renewal is for the current plan, as is common in gym models.
+    
     try {
         // 1. Get member's current plan info
         const [memberData] = await db.execute(
@@ -213,7 +222,7 @@ exports.initiateRenewal = async (req, res) => {
             renewalStartDate = new Date().toISOString().split('T')[0];
         } else {
              // Case 2: Plan is active. Renewal starts the day after the current end date.
-            const endDate = new Date(membership_end_date);
+            const endDate = new Date(membership_end_date + 'T00:00:00'); // Add time to avoid date shift
             // Increment the end date by one day
             endDate.setDate(endDate.getDate() + 1); 
             renewalStartDate = endDate.toISOString().split('T')[0];
@@ -237,11 +246,20 @@ exports.initiateRenewal = async (req, res) => {
             });
         }
         
+        // 4. (SIMULATED) Record a payment for the renewal
+        const renewalPrice = 500; // Placeholder, in a real app this would come from the 'plans' table
+        const [paymentResult] = await db.execute(
+            `INSERT INTO payments (member_id, plan_id, amount, payment_date, payment_method, status)
+            VALUES (?, ?, ?, NOW(), 'Credit Card (Auto-Renew)', 'Completed')`,
+            [memberUserId, current_plan_id, renewalPrice]
+        );
+
         res.status(200).json({
-            message: "Plan renewal initiated and membership end date extended successfully.",
+            message: "Plan renewed successfully. Membership end date extended.",
             user_id: memberUserId,
             new_end_date: newEndDate,
-            plan_id: current_plan_id
+            plan_id: current_plan_id,
+            payment_id: paymentResult.insertId
         });
     } catch (error) {
         console.error("Error initiating plan renewal:", error);
@@ -249,5 +267,71 @@ exports.initiateRenewal = async (req, res) => {
             message: "Server error during plan renewal process.",
             error: error.message
         });
+    }
+};
+
+// --- 5. GET MEMBER PAYMENT HISTORY ---
+// Route: GET /api/member/payments
+exports.getMemberPayments = async (req, res) => {
+    const memberUserId = req.user.id;
+
+    try {
+        const [payments] = await db.execute(
+            `SELECT
+                p.id AS payment_id,
+                p.amount,
+                p.payment_date,
+                p.payment_method,
+                p.status,
+                pl.plan_name
+            FROM payments p
+            LEFT JOIN plans pl ON p.plan_id = pl.id
+            WHERE p.member_id = ?
+            ORDER BY p.payment_date DESC`,
+            [memberUserId]
+        );
+
+        res.status(200).json({
+            message: "Payment history fetched successfully.",
+            count: payments.length,
+            payments: payments
+        });
+
+    } catch (error) {
+        console.error("Error fetching member payments:", error);
+        res.status(500).json({ message: "Server error while retrieving payment data." });
+    }
+};
+
+// --- 6. GET MEMBER SCHEDULED SESSIONS ---
+// Route: GET /api/member/sessions
+exports.getMemberSessions = async (req, res) => {
+    const memberUserId = req.user.id;
+
+    try {
+        const [sessions] = await db.execute(
+            `SELECT
+                s.id AS session_id,
+                s.session_time,
+                s.duration_minutes,
+                s.status,
+                s.notes,
+                t.full_name AS trainer_name
+            FROM sessions s
+            LEFT JOIN users t ON s.trainer_id = t.id AND t.role = 'trainer'
+            WHERE s.member_id = ?
+            ORDER BY s.session_time DESC`,
+            [memberUserId]
+        );
+
+        res.status(200).json({
+            message: "Scheduled sessions fetched successfully.",
+            count: sessions.length,
+            sessions: sessions
+        });
+
+    } catch (error) {
+        console.error("Error fetching member sessions:", error);
+        res.status(500).json({ message: "Server error while retrieving session data." });
     }
 };
