@@ -861,3 +861,118 @@ exports.deleteSession = async (req, res) => {
         res.status(500).json({ message: "Error deleting session", error: error.message });
     }
 };
+
+// --- 26. GET ALL MEMBERSHIP REQUESTS ---
+//Route: GET /api/admin/membership-requests
+
+exports.getAllMembershipRequests = async (req, res) => {
+    try {
+        const [requests] = await db.execute(
+            `SELECT id, full_name, email, phone, message, status, created_at
+            FROM membership_requests
+            ORDER BY created_at DESC`
+        );
+
+        res.status(200).json({
+            message: "Membership requests fetched successfully",
+            data: requests
+        });
+    } catch (error) {
+        console.error("Error fetching membership requests:", error);
+        res.status(500).json({
+            message: "Server error while fetching membership requests",
+            error: error.message
+        });
+    }
+};
+
+// --- APPROVE / REJECT MEMBERSHIP REQUEST ---
+// Route: PUT /api/admin/membership-requests/:id
+
+exports.updateMembershipRequestStatus = async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body; // approved | rejected
+
+    if (!["approved", "rejected"].includes(status)) {
+        return res.status(400).json({
+            message: "Invalid status. Use 'approved' or 'rejected'."
+        });
+    }
+
+    let connection;
+
+    try {
+        connection = await db.getConnection();
+        await connection.beginTransaction();
+
+        //  Check request exists & is pending
+        const [requests] = await connection.execute(
+            "SELECT * FROM membership_requests WHERE id = ? AND status = 'pending'",
+            [id]
+        );
+
+        if (requests.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({
+                message: "Membership request not found or already processed"
+            });
+        }
+
+        const request = requests[0];
+
+        //  Update request status
+        await connection.execute(
+            "UPDATE membership_requests SET status = ? WHERE id = ?",
+            [status, id]
+        );
+
+        //  If APPROVED → create user & member profile
+        if (status === "approved") {
+            const passwordHash = await bcrypt.hash("password123", 10);
+
+            // Create user
+            const [userResult] = await connection.execute(
+                `INSERT INTO users (full_name, email, phone, password_hash, role)
+                 VALUES (?, ?, ?, ?, 'member')`,
+                [
+                    request.full_name,
+                    request.email,
+                    request.phone,
+                    passwordHash
+                ]
+            );
+
+            // Create member profile
+            await connection.execute(
+                "INSERT INTO member_profiles (user_id) VALUES (?)",
+                [userResult.insertId]
+            );
+        }
+
+        //  Commit ONCE
+        await connection.commit();
+
+        return res.json({
+            message: `Membership request ${status} successfully`
+        });
+
+    } catch (error) {
+        console.error("Membership approval error:", error);
+
+        if (connection) {
+            try {
+                await connection.rollback();
+            } catch (rollbackErr) {
+                console.error("Rollback failed:", rollbackErr);
+            }
+        }
+
+        return res.status(500).json({
+            message: "Server error",
+            error: error.message
+        });
+
+    } finally {
+        if (connection) connection.release();
+    }
+};
