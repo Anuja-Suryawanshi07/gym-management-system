@@ -1,22 +1,39 @@
 const express = require('express');
-const app = express();
+const cors = require('cors');
 require('dotenv').config();
+const app = express();
 const db = require('./config/db');
 const PORT = process.env.PORT || 7000;
 const adminRoutes = require('./routes/adminRoutes');
 const trainerRoutes = require('./routes/trainerRoutes');
 const memberRoutes = require('./routes/memberRoutes');
 const authRoutes = require('./routes/authRoutes');
+const membershipRequestRoutes = require("./routes/membershipRequestRoutes");
+// --- CORS CONFIGURATION ---
+// This tells the browser that requests from your frontend origin are allowed
+app.use(cors({
+  origin: 'http://localhost:5173', // Replace with your frontend URL (e.g., http://localhost:3000)
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 //Middleware to parse JSON bodies
 app.use(express.json());
-
-
 // Middleware to parse URL-encoded form data
 app.use(express.urlencoded({ extended: true }));
+app.use((req, res, next) => {
+  if (req.path === '/api/auth/login') {
+    console.log(`[DEBUG] Login Attempt - Body:`, req.body);
+  }
+  next();
+});
+
 
 // Public Authentication routes (Login)
 app.use('/api/auth', authRoutes);
+
+// Public Membership Request routes
+app.use('/api/public', membershipRequestRoutes);
 
 // --- TEST ROUTE: Fetch all users from a table ---
 

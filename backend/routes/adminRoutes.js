@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticate, isAdmin } = require('../middleware/authMiddleware');
 const adminController = require('../controllers/adminController');
+const { getAllMembershipRequests } = require("../controllers/adminController");
 
 // MIDDLEWARE APPLICATION
 
@@ -86,5 +87,13 @@ router.delete('/members/:user_id', adminController.deleteMemberProfile);
 // GET /api/admin/profile - Get Admin's own user profile
 router.get('/profile', adminController.getAdminProfile);
 
+// To get membership request
+router.get("/membership-requests",getAllMembershipRequests);
+
+// Approve / Reject Membership Request
+router.put(
+    "/membership-requests/:id",
+    adminController.updateMembershipRequestStatus
+);
 
 module.exports = router;
