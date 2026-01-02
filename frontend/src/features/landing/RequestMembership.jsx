@@ -1,4 +1,5 @@
 import { useState } from "react";
+import api from "../../services/api";
 
 function RequestMembership() {
     const [formData, setFormData] = useState({
@@ -9,6 +10,8 @@ function RequestMembership() {
     });
 
     const [submitted, setSubmitted] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
 
     const handleChange = (e) => {
         setFormData({
@@ -17,8 +20,27 @@ function RequestMembership() {
         });
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
+        setError("");
+        setLoading(true);
+
+        try {
+            await api.post("/public/membership-requests", {
+                full_name: formData.fullName,
+                email: formData.email,
+                phone: formData.phone,
+                message:formData.goal,
+            });
+
+            setSubmitted(true);
+        } catch (err) {
+            setError(
+                err.response?.data?.message || "Failed to submit request"
+            );
+        } finally {
+            setLoading(false);
+        }
 
         console.log("Membership Request:", formData);
         setSubmitted(true);
@@ -94,12 +116,15 @@ function RequestMembership() {
                     placeholder="Weight loss, muscle gain, general fitness..."
                 />    
             </div>
-
+            {error && (
+                <p className="text-red-500 text-sm mb-3">{error}</p>
+            )}
             <button
                 type="submit"
+                disabled={loading}
                 className="w-full bg-yellow-500 text-black py-2 rounded font-semibold hover:bg-yellow-600"
             >
-                Submit Request
+                {loading ? "Submitting..." : "Submit Request"}
             </button>
 
             </form>    
