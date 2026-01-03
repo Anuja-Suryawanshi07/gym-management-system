@@ -32,7 +32,7 @@ exports.authenticate = (req, res, next) => {
 // Middleware to check if the user is an Admin
 exports.isAdmin = (req, res, next) => {
     // This assumes the authenticate middleware has already run and attched req.user
-    if (req.user && req.user.role === 'Admin') {
+    if (req.user && req.user.role === 'admin') {
         next();
     } else {
         return res.status(403).json({ message: 'Forbidden. Admin access required.' });
@@ -40,7 +40,7 @@ exports.isAdmin = (req, res, next) => {
 };
 // Middleware to check if the user is an Trainer
 exports.isTrainer = (req, res, next) => {
-    if (req.user && req.user.role === 'Trainer') {
+    if (req.user && req.user.role === 'trainer') {
         next();
     } else {
         return res.status(403).json({ message: 'Forbidden. Trainer access required.'});
@@ -49,7 +49,7 @@ exports.isTrainer = (req, res, next) => {
 
 // Middleware to check if the user is an Member
 exports.isMember = (req, res, next) => {
-    if (req.user && req.user.role === 'Member') {
+    if (req.user && req.user.role === 'member') {
         next();
     } else {
         return res.status(403).json({ message: 'Forbidden. Member access required.'});

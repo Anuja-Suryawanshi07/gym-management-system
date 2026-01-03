@@ -31,7 +31,7 @@ exports.register = async (req, res) => {
     }
     
     // Simple role check for security/integrity
-    const allowedRoles = ['Member', 'Trainer', 'Admin'];
+    const allowedRoles = ['member', 'trainer', 'admin'];
     if (!allowedRoles.includes(role)) {
         return res.status(400).json({ message: "Invalid role specified." });
     }
@@ -68,12 +68,12 @@ exports.register = async (req, res) => {
         );
 
         // 6. If role is Member or Trainer, create corresponding profile table entry (essential for the join logic to work)
-        if (role === 'Member') {
+        if (role === 'member') {
             await connection.execute(
                 `INSERT INTO member_profiles (user_id) VALUES (?)`, 
                 [newUserId]
             );
-        } else if (role === 'Trainer') {
+        } else if (role === 'trainer') {
              await connection.execute(
                 `INSERT INTO trainer_profiles (user_id) VALUES (?)`, 
                 [newUserId]
@@ -104,15 +104,15 @@ exports.register = async (req, res) => {
 // --- Login Function ---
 // Route: POST /api/auth/login
 exports.login = async (req, res) => {
-    console.log('Login attempt received!');
+    console.log("Login attempt received!");
     const { email, password } = req.body;
 
     if (!email || !password) {
         return res.status(400).json({ message: "Email and password are required." });
     }
-    
+
     try {
-        // 1. Find User by Email
+        // 1. Find user
         const [userRows] = await db.execute(
             "SELECT id, email, password_hash, full_name FROM users WHERE email = ?",
             [email]
@@ -121,46 +121,52 @@ exports.login = async (req, res) => {
         if (userRows.length === 0) {
             return res.status(401).json({ message: "Invalid email or password." });
         }
+
         const user = userRows[0];
 
-        // 2. Compare Password
+        // 2. Compare password
         const passwordMatch = await bcrypt.compare(password, user.password_hash);
-
         if (!passwordMatch) {
             return res.status(401).json({ message: "Invalid email or password." });
         }
 
-        // 3. Fetch User Role(s)
+        // 3. Fetch role properly
         const [roleRows] = await db.execute(
             `
             SELECT r.role_name
             FROM user_roles ur
             JOIN roles r ON ur.role_id = r.id
-            WHERE ur.user_id = ?`,
+            WHERE ur.user_id = ?
+            `,
             [user.id]
         );
 
-        // Assuming a user can have one primary role for now
-        const role = roleRows.length > 0 ? roleRows[0].role_name : "unassigned";
+        const role = roleRows.length > 0
+            ? roleRows[0].role_name.toLowerCase()
+            : "unassigned";
 
         // 4. Generate JWT
         const token = jwt.sign(
-            { id: user.id, email: user.email, role: role },
-            process.env.JWT_SECRET, // Access the secret from .env
-            { expiresIn: "1d" } // Token expires in 1 day
+            { id: user.id, email: user.email, role },
+            process.env.JWT_SECRET,
+            { expiresIn: "1d" }
         );
 
+        // 5. Respond
         res.status(200).json({
             message: "Login successful",
             user: {
                 id: user.id,
                 full_name: user.full_name,
-                role: role,
+                role,
             },
             token,
         });
+
     } catch (error) {
         console.error("Login error:", error);
-        res.status(500).json({ message: "An internal server error occurred during login." });
+        res.status(500).json({
+            message: "An internal server error occurred during login.",
+        });
     }
 };
