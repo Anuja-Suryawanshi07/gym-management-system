@@ -25,8 +25,8 @@ function Login() {
       // Role-based redirect
       const role = res.data.user.role;
 
-      if (role === "Admin") navigate("/dashboard");
-      else if (role === "Trainer") navigate("/trainer");
+      if (role === "admin") navigate("/dashboard");
+      else if (role === "trainer") navigate("/trainer");
       else navigate("/member");
     } catch (err) {
       setError(err.response?.data?.message || "Login failed");
