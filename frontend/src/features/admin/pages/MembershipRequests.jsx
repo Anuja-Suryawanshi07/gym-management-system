@@ -26,14 +26,16 @@ export default function MembershipRequests() {
     }, []);
 
     const handleAction = async (id, status) => {
-        if (!window.confirm(`Are you sure you want to ${status} this request?`))
-            return;
-
         try {
             await updateMembershipRequestStatus(id, status);
-            fetchRequests(); // refresh table
+
+            // Remove updated row from UI
+            setRequests(prev => prev.map(r => r.id === id ? { ... r, status } : r ));
+
+            alert(`Request ${status} successfully`);
         } catch (err) {
-            alert(err.response?.data?.message || "Action failed");
+            console.error("Action failed", err);
+            alert("Failed to update request");
         }
     };
 
@@ -54,7 +56,7 @@ export default function MembershipRequests() {
                             <th className="p-3">Phone</th>
                             <th className="p-3">Message</th>
                             <th className="p-3">Status</th>
-                            <th className="p-3">Actions</th>
+                            <th className=" border p-3">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -75,8 +77,8 @@ export default function MembershipRequests() {
                                     <td className="p-3">{req.phone}</td>
                                     <td className="p-3">{req.message}</td>
                                     <td className="p-3"><StatusBadge status={req.status} /></td>
-                                    <td className="p-3 space-x-2">
-                                        {req.status === "pending" ? (
+                                    <td className=" border p-3 space-x-2">
+                                        {req.status?.toLowerCase() === "pending" ? (
                                             <>
                                             <button
                                                 onClick={() =>
