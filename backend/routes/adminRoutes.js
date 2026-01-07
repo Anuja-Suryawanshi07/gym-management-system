@@ -96,4 +96,14 @@ router.put(
     adminController.updateMembershipRequestStatus
 );
 
+router.put(
+    "/members/:id/assign",
+    authenticate,
+    isAdmin,
+    adminController.assignTrainerAndPlan
+);
+
+router.get("/trainers", authenticate,isAdmin, adminController.getTrainers);
+router.get("/plans", authenticate, isAdmin, adminController.getPlans);
+
 module.exports = router;

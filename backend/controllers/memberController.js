@@ -55,7 +55,6 @@ exports.getMemberProfile = async (req, res) => {
                 p.price AS plan_price,
                 
                 -- Trainer Details (Requires JOIN on assigned_trainer_id)
-                tp.user_id AS trainer_id,
                 t_user.full_name AS trainer_name,
                 tp.specialty AS trainer_specialty
                 

@@ -562,25 +562,25 @@ exports.createMemberProfile = async (req, res) => {
     const {
         user_id,
         trainer_id,
-        membership_start,
-        membership_end,
+        membership_start_date,
+        membership_end_date,
         health_details,
         current_plan_id // Added plan ID
     } = req.body;
 
-    if (!user_id || !membership_start || !membership_end || !current_plan_id) {
+    if (!user_id || !membership_start_date || !membership_end_date || !current_plan_id) {
         return res.status(400).json({
             message: "Missing required fields: user_id, membership_start, membership_end, and current_plan_id.",
         });
     }
     try {
         const [result] = await db.execute(
-            "INSERT INTO member_profiles (user_id, trainer_id, membership_start, membership_end, health_details, current_plan_id) VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT INTO member_profiles (user_id, trainer_id, membership_start_date, membership_end_date, health_details, current_plan_id) VALUES (?, ?, ?, ?, ?, ?)",
             [
                 user_id,
                 trainer_id || null,
-                membership_start,
-                membership_end,
+                membership_start_date,
+                membership_end_date,
                 health_details,
                 current_plan_id
             ]
@@ -611,12 +611,12 @@ exports.getAllMembers = async (req, res) => {
         const [rows] = await db.query(`
             SELECT 
             u.id AS user_id, u.full_name, u.email, u.phone,
-            mp.membership_start, mp.membership_end, mp.health_details,
+            mp.membership_start_date, mp.membership_end_date, mp.health_goals,
             t.full_name AS assigned_trainer_name,
             p.plan_name AS current_plan_name
             FROM users u
             JOIN member_profiles mp ON u.id = mp.user_id
-            LEFT JOIN users t ON mp.trainer_id = t.id
+            LEFT JOIN users t ON mp.assigned_trainer_id = t.id
             LEFT JOIN plans p ON mp.current_plan_id = p.id
             WHERE u.role = 'member'
             ORDER BY u.id DESC
@@ -637,20 +637,23 @@ exports.getMemberById = async (req, res) => {
 
     try {
         const [rows] = await db.execute(
-            ` SELECT u.id AS user_id,
-            u.full_name,
-            u.email,
-            u.phone,
-            mp.trainer_id,
-            mp.membership_start,
-            mp.membership_end,
-            mp.health_details,
-            mp.current_plan_id
+            `SELECT 
+                u.id AS user_id,
+                u.full_name,
+                u.email,
+                u.phone,
+
+                mp.membership_status,
+                mp.health_goals,
+                mp.membership_start_date,
+                mp.membership_end_date,
+                mp.assigned_trainer_id,
+                mp.current_plan_id
+
             FROM users u
             JOIN member_profiles mp ON u.id = mp.user_id
             WHERE u.id = ? AND u.role = 'member'`,
-            [memberUserId]
-        );
+            [memberUserId]        );
         if (rows.length === 0) {
             return res.status(404).json({ message: `Member profile for user ID ${memberUserId} not found.` });
         }
@@ -975,4 +978,42 @@ exports.updateMembershipRequestStatus = async (req, res) => {
     } finally {
         if (connection) connection.release();
     }
+};
+
+
+// --- ASSIGN TRAINER AND PLAN TO MEMBER ---
+// Route: PUT /api/admin/members/:id/assign
+exports.assignTrainerAndPlan = async (req, res) => {
+    const memberUserId = req.params.id;
+    const { trainerId, planId } = req.body;
+
+    try {
+        await db.execute(
+            `UPDATE member_profiles
+            SET assigned_trainer_id = ?, current_plan_id = ?
+            WHERE user_id = ?`,
+            [trainerId || null, planId || null, memberUserId]
+        );
+
+        res.json ({ message: "Trainer and plan assigned successfully" });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Assignment failed" });
+    }
+};
+
+exports.getTrainers = async (req, res) => {
+    const [rows] = await db.execute(
+        `SELECT u.id, u.full_name
+        FROM users u
+        WHERE u.role = 'trainer'`
+    );
+    res.json({ trainers: rows });
+};
+
+exports.getPlans = async (req, res) => {
+    const [rows] = await db.execute(
+        `SELECT id, plan_name FROM plan`
+    );
+    res.json({ plans: rows });
 };
