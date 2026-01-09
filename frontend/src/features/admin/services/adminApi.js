@@ -18,5 +18,13 @@ export const getMemberById =(id) =>
 export const getTrainers = () => axios.get("/admin/trainers");
 export const getPlans = () => axios.get("/admin/plans");
 
-export const assignTrainerAndPlan = (id, data) =>
-  axios.put(`/admin/members/${id}/assign`, data);
+export const assignTrainerAndPlan = (userId, trainerId, planId) =>
+  axios.put(`/admin/members/${userId}`, {
+    assigned_trainer_id: trainerId,
+    current_plan_id: planId
+  });
+
+export const updateMemberStatus = (userId, status) =>
+  axios.put(`/admin/members/${userId}/status`, {
+    membership_status: status
+  });  
