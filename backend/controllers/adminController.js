@@ -1,3 +1,4 @@
+const { message } = require("statuses");
 const db = require("../config/db");
 const bcrypt = require("bcrypt");
 
@@ -648,10 +649,15 @@ exports.getMemberById = async (req, res) => {
                 mp.membership_start_date,
                 mp.membership_end_date,
                 mp.assigned_trainer_id,
-                mp.current_plan_id
+                mp.current_plan_id,
+
+                t.full_name As trainer_name,
+                p.plan_name
 
             FROM users u
             JOIN member_profiles mp ON u.id = mp.user_id
+            LEFT JOIN users t ON mp.assigned_trainer_id = t.id
+            LEFT JOIN plans p ON mp.current_plan_id = p.id
             WHERE u.id = ? AND u.role = 'member'`,
             [memberUserId]        );
         if (rows.length === 0) {
@@ -671,58 +677,87 @@ exports.getMemberById = async (req, res) => {
 // Route: PUT /api/admin/members/:user_id
 // Uses the best version of this function found in the provided code
 exports.updateMemberProfile = async (req, res) => {
-    const user_id = req.params.user_id;
-    const { trainer_id, membership_start, membership_end, health_details, current_plan_id } =
-        req.body;
+    const  user_id   = req.params.user_id;
 
-    let query = " UPDATE member_profiles SET ";
-    const queryParams = [];
-    const fields = {
-        trainer_id,
-        membership_start,
-        membership_end,
-        health_details,
-        current_plan_id // Added
-    };
+    console.log("UPDATE MEMBER:", user_id, req.body);
 
-    // Build query dynamically
-    for (const key in fields) {
-        // Ensure field is defined, allowing explicit null updates (e.g., trainer_id: null)
-        if (fields[key] !== undefined) { 
-            query += `${key} = ?, `;
-            queryParams.push(fields[key]);
-        }
+
+    // ✅ Destructure with DEFAULT null (VERY IMPORTANT)
+    const {
+        assigned_trainer_id,
+        current_plan_id,
+        membership_start_date,
+        membership_end_date,
+        health_goals
+    } = req.body;
+
+    const fields = {};
+    if (assigned_trainer_id !== undefined) fields.assigned_trainer_id = assigned_trainer_id;
+    if (current_plan_id !== undefined) fields.current_plan_id = current_plan_id;
+    if (membership_start_date !== undefined) fields.membership_start_date = membership_start_date;
+    if (membership_end_date !== undefined) fields.membership_end_date = membership_end_date;
+    if (health_goals !== undefined) fields.health_goals = health_goals;
+
+    if (Object.keys(fields).length === 0) {
+        return res.status(400).json({ message: "No fields provided for update" });
     }
     
-    // Check if any fields were provided
-    if (queryParams.length === 0) {
-        return res.status(400).json({ message: "No fields provided for update." });
-    }
+
+    // Build query dynamically, but NEVER allow undefined
+    const setClause = Object.keys(fields)
+        .map(key => `${key} = ?`)
+        .join(", ");
     
-    query = query.slice(0, -2) + " WHERE user_id = ?";
-    queryParams.push(user_id);
+    const values = [...Object.values(fields), user_id];
+    
+    const sql = `UPDATE member_profiles SET ${setClause} WHERE user_id = ?`;
 
     try {
-        const [result] = await db.execute(query, queryParams);
+        const [result] = await db.execute(sql, values);
 
         if (result.affectedRows === 0) {
-            // Check for 404
-            const [profileCheck] = await db.execute("SELECT user_id FROM member_profiles WHERE user_id = ?", [user_id]);
-            if (profileCheck.length === 0) {
-                 return res.status(404).json({ message: "Member profile not found." });
-            }
-            return res.status(200).json({ message: "Member profile details already up-to-date, no changes made." });
+            return res.status(404).json({ message: "Member profile not found" });
         }
-        res.status(200).json({
-            message: "Member profile updated successfully.",
-        });
+
+        res.status(200).json({ message: "Member profile updated successfully" });
     } catch (error) {
         console.error("Error updating member profile:", error);
-        res
-            .status(500)
-            .json({ message: "Error updating member profile", error: error.message });
+        res.status(500).json({
+            message: "Error updating member profile",
+            error: error.message
+        });
     }
 };
+
+exports.updateMemberStatus = async (req, res) => {
+    const { user_id } = req.params;
+    const { membership_status } = req.body;
+
+    console.log("UPDATE STATUS:", user_id, membership_status);
+
+    if (!membership_status) {
+        return res.status(400).json({ message: "membership status is required" });
+    }
+    
+    try {
+        const [result] = await db.execute(
+            `UPDATE member_profiles
+            SET membership_status = ?
+            WHERE user_id = ?`,
+            [membership_status, user_id]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: "Member not found" });
+        }
+
+        res.status(200). json({ message: "Membership status updated" });
+    } catch (error) {
+        console.error("Status update error:", error);
+        res.status(500).json({ message: "Failed to update status" });
+    }
+};
+
 
 // --- 21. DELETE MEMBER PROFILE ---
 // Route: DELETE /api/admin/members/:user_id
@@ -984,21 +1019,49 @@ exports.updateMembershipRequestStatus = async (req, res) => {
 // --- ASSIGN TRAINER AND PLAN TO MEMBER ---
 // Route: PUT /api/admin/members/:id/assign
 exports.assignTrainerAndPlan = async (req, res) => {
-    const memberUserId = req.params.id;
-    const { trainerId, planId } = req.body;
+    console.log("RAW BODY:", req.body);
+    const user_id = req.params.user_id;
+
+    // ✅ SAFELY MAP FRONTEND KEYS
+    const {
+        trainerId,
+        planId
+    } = req.body;
+
+    // ✅ Convert undefined → null
+    const assigned_trainer_id = trainerId ?? null;
+    const current_plan_id = planId ?? null;
+
+    console.log("ASSIGN FIXED:", {
+        user_id,
+        assigned_trainer_id,
+        current_plan_id
+    });
 
     try {
-        await db.execute(
+        const [result] = await db.execute(
             `UPDATE member_profiles
-            SET assigned_trainer_id = ?, current_plan_id = ?
-            WHERE user_id = ?`,
-            [trainerId || null, planId || null, memberUserId]
+             SET assigned_trainer_id = ?, current_plan_id = ?
+             WHERE user_id = ?`,
+            [assigned_trainer_id, current_plan_id, user_id]
         );
 
-        res.json ({ message: "Trainer and plan assigned successfully" });
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                message: "Member profile not found"
+            });
+        }
+
+        res.status(200).json({
+            message: "Trainer and plan assigned successfully"
+        });
+
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Assignment failed" });
+        console.error("Assign error:", error);
+        res.status(500).json({
+            message: "Assignment failed",
+            error: error.message
+        });
     }
 };
 
