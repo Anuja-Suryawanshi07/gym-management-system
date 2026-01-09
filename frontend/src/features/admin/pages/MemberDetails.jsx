@@ -6,8 +6,10 @@ import {
   getPlans,
   assignTrainerAndPlan,
   updateMemberStatus,
+  updateMembershipDates,
 } from "../services/adminApi";
 import toast from "react-hot-toast";
+
 
 export default function MemberDetails() {
   const { id } = useParams();
@@ -24,6 +26,9 @@ export default function MemberDetails() {
   const [status, setStatus] = useState("");
   const [statusLoading, setStatusLoading] = useState(false);
 
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [dateLoading, setDateLoading] = useState(false);
   // Fetch member details
   useEffect(() => {
     const fetchMember = async () => {
@@ -31,6 +36,9 @@ export default function MemberDetails() {
         const res = await getMemberById(id);
         setMember(res.data.member);
         setStatus(res.data.member.membership_status);
+        setStartDate(res.data.member.membership_start_date?.slice(0, 10) || "");
+        setEndDate(res.data.member.membership_end_date?.slice(0, 10) || "");
+
       } catch (err) {
         console.error("Failed to fetch member details", err);
       } finally {
@@ -98,6 +106,34 @@ export default function MemberDetails() {
     }
   };
 
+  const handleDateUpdate = async () => {
+  if (!startDate || !endDate) {
+    toast.error("Both dates are required");
+    return;
+  }
+
+  try {
+    setDateLoading(true);
+
+    await updateMembershipDates(id, {
+      startDate,
+      endDate
+    });
+
+    toast.success("Membership dates updated");
+
+    const res = await getMemberById(id);
+    setMember(res.data.member);
+
+  } catch (err) {
+    console.error(err);
+    toast.error("Failed to update membership dates");
+  } finally {
+    setDateLoading(false);
+  }
+};
+
+
   if (loading) {
     return <p className="text-white p-6">Loading member details...</p>;
   }
@@ -152,14 +188,38 @@ export default function MemberDetails() {
         <p>
           <strong>Health Goals:</strong> {member.health_goals || "-"}
         </p>
-        <p>
-          <strong>Membership Start:</strong>{" "}
-          {member.membership_start_date?.slice(0, 10) || "-"}
-        </p>
-        <p>
-          <strong>Membership End:</strong>{" "}
-          {member.membership_end_date?.slice(0, 10) || "-"}
-        </p>
+        
+      </div>
+
+      {/* Membership Period */}
+      <div className="bg-gray-800 p-4 rounded">
+        <h2 className="text-xl font-bold mb-3">Membership Period</h2>
+
+        <label className="block mb-2">Start Date</label>
+        <input 
+          type="date"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+          className="w-full p-2 bg-gray-900 rounded mb-3"
+        />
+        <label className="block mb-2">End Date</label>
+        <input
+          type="date"
+          value={endDate}
+          onChange={(e) => setEndDate(e.target.value)}
+          className="w-full p-2 bg-gray-900 rounded mb-4"
+        />
+
+        <button
+          onClick={handleDateUpdate}
+          disabled={dateLoading || startDate === member.membership_start_date?.slice(0, 10) &&
+            endDate === member.membership_end_date?.slice(0, 10)
+          }
+          className="bg-blue-500 px-4 py-2 rounded text-black font-bold disabled:opacity-50"
+        >
+          {dateLoading ? "Updating..." : "Update Membership"}
+
+        </button>       
       </div>
 
       {/* Assign Trainer & Plan */}

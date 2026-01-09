@@ -28,3 +28,9 @@ export const updateMemberStatus = (userId, status) =>
   axios.put(`/admin/members/${userId}/status`, {
     membership_status: status
   });  
+
+export const updateMembershipDates = (userId, dates) =>
+  axios.put(`/admin/members/${userId}/membershipdate`, {
+    membership_start_date: dates.startDate,
+    membership_end_date: dates.endDate
+  });
