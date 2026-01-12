@@ -3,7 +3,14 @@ const router = express.Router();
 const { authenticate, isAdmin } = require('../middleware/authMiddleware');
 const adminController = require('../controllers/adminController');
 const { getAllMembershipRequests } = require("../controllers/adminController");
-const { getMembers, getMemberById, assignTrainerAndPlan, updateMemberProfile, updateMemberStatus, updateMembershipDates } = require("../controllers/adminController");
+const { getMembers, 
+    getMemberById, 
+    assignTrainerAndPlan, 
+    updateMemberProfile, 
+    updateMemberStatus, 
+    updateMembershipDates, 
+    sendPaymentReminder } 
+= require("../controllers/adminController");
 
 // MIDDLEWARE APPLICATION
 
@@ -116,6 +123,13 @@ router.put(
     authenticate,
     isAdmin,
     updateMembershipDates
+);
+
+router.post(
+    "/members/:id/remind-payment",
+    authenticate,
+    isAdmin,
+    sendPaymentReminder
 );
 
 router.get("/trainers", authenticate,isAdmin, adminController.getTrainers);

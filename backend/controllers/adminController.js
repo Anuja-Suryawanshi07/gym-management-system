@@ -464,6 +464,7 @@ exports.getTrainerById = async (req, res) => {
             WHERE u.id = ? AND u.role = 'trainer'
         `, [trainerUserId]
         );
+        console.log("TRAINER ROW:", rows[0]);
         if (rows.length === 0) {
             return res.status(404).json({ message: `Trainer profile for user ID ${trainerUserId} not found.` });
         }
@@ -610,18 +611,36 @@ exports.createMemberProfile = async (req, res) => {
 exports.getAllMembers = async (req, res) => {
     try {
         const [rows] = await db.query(`
-            SELECT 
-            u.id AS user_id, u.full_name, u.email, u.phone,
-            mp.membership_start_date, mp.membership_end_date, mp.health_goals,
-            t.full_name AS assigned_trainer_name,
-            p.plan_name AS current_plan_name
-            FROM users u
-            JOIN member_profiles mp ON u.id = mp.user_id
-            LEFT JOIN users t ON mp.assigned_trainer_id = t.id
-            LEFT JOIN plans p ON mp.current_plan_id = p.id
-            WHERE u.role = 'member'
-            ORDER BY u.id DESC
-        `);
+  SELECT 
+    u.id AS user_id,
+    u.full_name,
+    u.email,
+    u.phone,
+
+    mp.membership_start_date,
+    mp.membership_end_date,
+    mp.health_goals,
+    mp.membership_status,
+
+    t.full_name AS assigned_trainer_name,
+    p.plan_name AS current_plan_name,
+
+    -- Auto-expiry logic
+    CASE
+      WHEN mp.membership_end_date IS NOT NULL
+       AND mp.membership_end_date < CURDATE()
+      THEN 1
+      ELSE 0
+    END AS is_expired
+
+  FROM users u
+  JOIN member_profiles mp ON u.id = mp.user_id
+  LEFT JOIN users t ON mp.assigned_trainer_id = t.id
+  LEFT JOIN plans p ON mp.current_plan_id = p.id
+  WHERE u.role = 'member'
+  ORDER BY u.id DESC
+`);
+
         res.status(200).json({ members: rows });
     } catch (error) {
         console.error("Error fetching members:", error);
@@ -1022,13 +1041,13 @@ exports.assignTrainerAndPlan = async (req, res) => {
     console.log("RAW BODY:", req.body);
     const user_id = req.params.user_id;
 
-    // ✅ SAFELY MAP FRONTEND KEYS
+    //  SAFELY MAP FRONTEND KEYS
     const {
         trainerId,
         planId
     } = req.body;
 
-    // ✅ Convert undefined → null
+    //  Convert undefined → null
     const assigned_trainer_id = trainerId ?? null;
     const current_plan_id = planId ?? null;
 
@@ -1116,4 +1135,39 @@ exports.updateMembershipDates = async (req, res) => {
     console.error("Error updating membership dates:", error);
     res.status(500).json({ message: "Server error" });
   }
+};
+
+exports.sendPaymentReminder = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const [[member]] = await db.execute(`
+            SELECT
+                u.email,
+                u.full_name,
+                mp.membership_end_date
+            FROM users u
+            JOIN member_profiles mp ON u.id = mp.user_id
+            WHERE u.id = ?    
+            `, [id]);
+
+            if (!member) {
+                return res.status(404).json({ message: "Member not found "});
+            }
+
+            // For log (later email/ whatsApp)
+            console.log(`
+                PAYMENT REMINDER
+                Name: ${member.full_name}
+                Email: ${member.email}
+                Expired on: ${member.membership_end_date}
+                `);
+
+                res.json({
+                    message: "Payment reminder sent successfully"
+                });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Failed to send reminder" });
+    }
 };
