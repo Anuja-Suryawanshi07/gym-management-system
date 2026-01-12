@@ -34,3 +34,18 @@ export const updateMembershipDates = (userId, dates) =>
     membership_start_date: dates.startDate,
     membership_end_date: dates.endDate
   });
+
+  export const sendPaymentReminder = (userId) =>
+    axios.post(`/admin/ members/${userId}/remind-payment`);
+
+  export const getAllTrainers = () =>
+    axios.get("/admin/trainers");
+
+  export const getTrainerById = (id) =>
+    axios.get(`/admin/trainers/${id}`);
+
+  export const updateTrainer = (id, data) =>
+    axios.put(`/admin/trainers/${id}`, data);
+
+  export const deleteTrainer = (id) =>
+    axios.delete(`/admin/trainers/${id}`);
