@@ -376,49 +376,87 @@ exports.deletePlan = async (req, res) => {
 // Route: POST /api/admin/trainers
 exports.createTrainerProfile = async (req, res) => {
     const {
-        user_id,
+        full_name,
+        email,
+        phone,
+        password,
         specialty,
-        experience_years,
+        experience_years, 
         certification_details,
         status,
-        schedule, // Added schedule to creation, though it's typically updated separately
+        schedule
     } = req.body;
-
-    if (!user_id || !specialty) {
-        return res
-            .status(400)
-            .json({ message: "Missing required fields: user_id and specialty." });
+    
+    // Basic validation
+    if (!full_name || !email || !password) {
+        return res.status(400).json({
+            message: "full_name, email and password are required"
+        });
     }
+
+    const connection = await db.getConnection();
 
     try {
-        const [result] = await db.execute(
-            "INSERT INTO trainer_profiles (user_id, specialty, experience_years, certification_details, status, schedule) VALUES (?, ?, ?, ?, ?, ?)",
-            [
-                user_id,
-                specialty,
-                experience_years,
-                certification_details,
-                status || "active",
-                schedule || '{"mon": "9am-5pm", "tue": "9am-5pm", "wed": "9am-5pm", "thu": "9am-5pm", "fri": "9am-5pm"}'
-            ]
+        await connection.beginTransaction();
+
+        // Check if email already exists
+        const [existingUser] = await connection.execute(
+            "SELECT id FROM users WHERE email = ?",
+            [email]
         );
-        res.status(201).json({
-            message: "Trainer profile created successfully",
-            profileId: result.insertId,
-        });
-    } catch (error) {
-        if (error.code === "ER_DUP_ENTRY") {
+
+        if (existingUser.length > 0) {
+            await connection.rollback();
             return res.status(409).json({
-                message: "Trainer profile already exists for this user ID.",
+                message: "User with this email already exists"
             });
         }
-        console.error("Error creating trainer profile:", error);
-        res.status(500).json({
-            message: "Error creating trainer profile",
-            error: error.message,
-        });
-    }
-};
+
+        // Hash password
+        const password_hash = await bcrypt.hash(password, 10);
+
+        // Create USER with role = trainer
+        const [userResult] = await connection.execute(
+            `INSERT INTO users (full_name, email, phone, password_hash, role)
+            VALUES (?, ?, ?, ?, 'trainer')`,
+            [full_name, email, phone, password_hash]
+        );
+
+        const userId  = userResult.insertId;
+        
+        // Create Trainer profile
+        await connection.execute(
+            `INSERT INTO trainer_profiles
+            (user_id, specialty, experience_years, certification_details, status, schedule)
+            VALUES (?, ?, ?, ?, ?, ?)`,
+            [
+                userId,
+                specialty || null,
+                experience_years || 0,
+                certification_details || null,
+                status || "active",
+                schedule || null
+            ]
+        );
+
+            await connection.commit();
+
+            res.status(201).json({
+                message: "Trainer created successfuly",
+                user_id: userId
+            });
+
+        } catch (error) {
+            await connection.rollback();
+            console.error("Error creating trainer profile:", error);
+            res.status(500).json({
+                message: "Failed to create trainer",
+                error: error.message
+            });
+        } finally {
+            connection.release();
+        }
+    };   
 
 // --- 13. READ ALL TRAINERS (JOINED with Users) ---
 // Route: GET /api/admin/trainers
@@ -482,8 +520,11 @@ exports.getTrainerById = async (req, res) => {
 // Route: PUT /api/admin/trainers/:user_id
 exports.updateTrainerProfile = async (req, res) => {
     const { user_id } = req.params;
-    const { specialty, experience_years, certification_details, status, schedule } =
-        req.body;
+    const { specialty, 
+            experience_years, 
+            certification_details, 
+            status, 
+            schedule } = req.body;
 
     let query = "UPDATE trainer_profiles SET ";
     const queryParams = [];
