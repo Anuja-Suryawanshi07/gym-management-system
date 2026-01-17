@@ -44,6 +44,9 @@ export const updateMembershipDates = (userId, dates) =>
   export const getTrainerById = (id) =>
     axios.get(`/admin/trainers/${id}`);
 
+  export const createTrainer = (data) =>
+    axios.post("/admin/trainers", data);
+
   export const updateTrainer = (id, data) =>
     axios.put(`/admin/trainers/${id}`, data);
 

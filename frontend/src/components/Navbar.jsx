@@ -11,7 +11,7 @@ function Navbar() {
         >
           <span>GymPro</span>
           
-          <div>
+          {/* <div>
             <h1 className="text-lg md:text-xl font-medium">
             Transform Your Body. Transform Your Life.
             </h1>
@@ -21,7 +21,7 @@ function Navbar() {
             personalized fitness plans.
             </p>
         
-          </div>  
+          </div>   */}
         </Link>
 
         {/* Menu */}

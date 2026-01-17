@@ -21,14 +21,17 @@ export default function Trainers() {
     }, []);
 
     const handleDelete = async (id) => {
-        if (!confirm("Are you sure to delete this Trainer?")) return;
+        if (!window.confirm("Are you sure to delete this Trainer?")) return;
 
         try {
             await deleteTrainer(id);
             toast.success("Trainer deleted");
-            fetchTrainers();
-        } catch {
-            toast.error("Delete failed");
+            setTrainers((prev) =>
+                prev.filter((trainer) => trainer.user_id == id)
+            );
+        } catch (error) {
+            console.error(error);
+            toast.error("Failed to Delete trainer");
         }
     };
 
