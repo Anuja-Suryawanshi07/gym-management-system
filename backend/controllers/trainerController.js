@@ -1,3 +1,4 @@
+const { message } = require('statuses');
 const db = require('../config/db');
 
 // --- 1. GET TRAINER PROFILE (Self-Access) ---
@@ -197,3 +198,104 @@ exports.updateSchedule = async (req, res) => {
         });
     }
 };
+
+exports.createSession = async (req, res) => {
+    const trainer_user_id = req.user.id; // users.id from JWT
+
+    const {
+        member_id,          // users.id of member
+        session_date,
+        session_time,
+        duration_minutes,
+        notes
+    } = req.body;
+
+    //  Validation
+    if (!member_id || !session_date || !session_time) {
+        return res.status(400).json({
+            message: "member_id, session_date, and session_time are required"
+        });
+    }
+
+    try {
+        //  1. Verify member is ACTIVE and assigned to this trainer
+        const [[member]] = await db.execute(
+            `
+            SELECT mp.id
+            FROM member_profiles mp
+            WHERE mp.user_id = ?
+              AND mp.assigned_trainer_id = ?
+              AND mp.membership_status = 'Active'
+            `,
+            [member_id, trainer_user_id]
+        );
+
+        if (!member) {
+            return res.status(403).json({
+                message: "Member not assigned to this trainer or inactive"
+            });
+        }
+
+        //  2. Insert session (MATCH DB COLUMNS)
+        const [result] = await db.execute(
+            `
+            INSERT INTO sessions
+            (trainer_user_id, member_user_id, session_date, session_time, duration_minutes, status, notes)
+            VALUES (?, ?, ?, ?, ?, 'scheduled', ?)
+            `,
+            [
+                trainer_user_id,
+                member_id,
+                session_date,
+                session_time,
+                duration_minutes || 60,
+                notes || null
+            ]
+        );
+
+        res.status(201).json({
+            message: "Session scheduled successfully",
+            session_id: result.insertId
+        });
+
+    } catch (error) {
+        console.error("Error creating session:", error);
+        res.status(500).json({
+            message: "Failed to create session",
+            error: error.message
+        });
+    }
+};
+
+exports.getTrainerSessions = async (req, res) => {
+    const trainer_user_id = req.user.id;
+
+    try {
+        const [sessions] = await db.execute(
+            ` SELECT 
+                s.id,
+                s.session_date,
+                s.session_time,
+                s.duration_minutes,
+                s.status,
+                s.notes,
+                u.full_name AS member_name,
+                u.id AS member_user_id
+            FROM sessions s
+            JOIN users u ON u.id = s.member_user_id
+            WHERE s.trainer_user_id = ?
+            ORDER BY s.session_date ASC, s.session_time ASC`,
+            [trainer_user_id]
+        );
+
+        res.status(200).json({ sessions });
+    } catch (error) {
+        console.error("Error fetching trainer sessions:", error);
+        res.status(500).json({
+            message: "Failed to fetch sessions",
+            error: error.message
+        });
+    }
+};
+
+

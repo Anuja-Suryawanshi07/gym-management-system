@@ -1,4 +1,4 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 const { authenticate, isTrainer } = require('../middleware/authMiddleware');
 const trainerController = require('../controllers/trainerController');
@@ -20,6 +20,9 @@ router.post('/checkin', trainerController.recordAttendance);
 // PUT /api/trainer/schedule - Update the trainer's availability/schedule
 router.put('/schedule', trainerController.updateSchedule);
 
+router.post("/sessions",trainerController.createSession);
+
+router.get("/sessions", trainerController.getTrainerSessions);
 module.exports = router;
 
 
