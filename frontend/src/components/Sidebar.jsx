@@ -23,7 +23,16 @@ function Sidebar() {
 
             {/* Role-based Sidebar */}
             {user.role === "admin" && <AdminSidebar />}
-            {user.role === "trainer" && <TrainerSidebar />}
+            {user?.role === "trainer" && 
+            <>
+                <li onClick={() => navigate("/trainer")} className="cursor-pointer">
+                    Dashboard
+                </li>
+                <li onClick={() => navigate("/trainer/sessions")} className="cursor-pointer">
+                    Sessions
+                </li>
+            </>    
+            }
             {user.role === "member" && <MemberSidebar />}
 
             {/* Logout button */}

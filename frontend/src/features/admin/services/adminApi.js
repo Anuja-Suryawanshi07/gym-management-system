@@ -16,7 +16,21 @@ export const getMemberById =(id) =>
   axios.get(`/admin/members/${id}`);
 
 export const getTrainers = () => axios.get("/admin/trainers");
-export const getPlans = () => axios.get("/admin/plans");
+export const getPlans = () => 
+  axios.get("/admin/plans");
+
+export const getPlanById = (id) =>
+  axios.get(`/admin/plans/${id}`);
+
+export const createPlan = (data) =>
+  axios.post("/admin/plans", data);
+
+export const updatePlan = (id, data) =>
+  axios.put(`/admin/plans/${id}`, data);
+
+export const deletePlan = (id) =>
+  axios.delete(`/admin/plans/${id}`);
+
 
 export const assignTrainerAndPlan = (userId, trainerId, planId) =>
   axios.put(`/admin/members/${userId}`, {

@@ -1,7 +1,7 @@
 export default function ConfirmModal({
     title = "Are you sure?",
     message = "This action cannot be undone.",
-    confirmText = "Confirm",
+    confirmText = "Delete",
     cancelText = "Cancel",
     onConfirm,
     onCancel

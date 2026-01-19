@@ -26,8 +26,8 @@ function Login() {
       const role = res.data.user.role;
 
       if (role === "admin") navigate("/dashboard/admin");
-      else if (role === "trainer") navigate("/dashboard/trainer");
-      else navigate("/dashboard/member");
+      else if (role === "trainer") navigate("/trainer");
+      else navigate("/member");
     } catch (err) {
       setError(err.response?.data?.message || "Login failed");
     }
