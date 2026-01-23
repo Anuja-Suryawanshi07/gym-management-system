@@ -3,6 +3,8 @@ const jwt = require('jsonwebtoken');
 //Middleware to verify JWT and attach user info to req
 exports.authenticate = (req, res, next) => {
     const authHeader = req.headers.authorization;
+   
+
     // 1. Check if the header exists and starts with "Bearer "
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return res.status(401).json({ message: 'Authentication required. Token missing or malformed.' });
@@ -17,9 +19,11 @@ exports.authenticate = (req, res, next) => {
     try {
         // 3. Verify token
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+         console.log("Decoded JWT:", decoded);
 
         //4. Attach user info (id, email, role) to the request object
         req.user = decoded;
+             
 
         //5. Proceed to the next middleware or route handler
         next(); 

@@ -114,9 +114,10 @@ exports.login = async (req, res) => {
     try {
         // 1. Find user
         const [userRows] = await db.execute(
-            "SELECT id, email, password_hash, full_name FROM users WHERE email = ?",
+            "SELECT id, email, password_hash, full_name, role FROM users WHERE email = ?",
             [email]
         );
+        console.log("User from DB:", userRows);
 
         if (userRows.length === 0) {
             return res.status(401).json({ message: "Invalid email or password." });
@@ -147,10 +148,20 @@ exports.login = async (req, res) => {
 
         // 4. Generate JWT
         const token = jwt.sign(
-            { id: user.id, email: user.email, role },
+            { id: user.id,
+             email: user.email,
+             role: user.role 
+            },
             process.env.JWT_SECRET,
             { expiresIn: "1d" }
         );
+        console.log("JWT Payload:", {
+  id: user.id,
+  email: user.email,
+  role: user.role
+});
+            
+
 
         // 5. Respond
         res.status(200).json({
