@@ -26,6 +26,9 @@ import TrainerLayout from "../features/trainers/layout/TrainerLayout";
 import TrainerDashboard from "../features/trainers/pages/TrainerDashboard";
 import Sessions from "../features/trainers/pages/Sessions";
 import AddSession from "../features/trainers/pages/AddSession";
+import EditSession from "../features/trainers/pages/EditSession";
+import TrainerMembers from "../features/trainers/pages/TrainerMembers";
+import Attendance from "../features/trainers/pages/Attendance";
 
 /* Member */
 import MemberLayout from "../features/members/layout/MemberLayout";
@@ -75,6 +78,9 @@ function AppRoutes() {
         <Route index element={<TrainerDashboard />} />
         <Route path="sessions" element={<Sessions />} />
         <Route path="sessions/add" element={<AddSession />} />
+        <Route path="sessions/:id/edit" element={<EditSession />} />
+        <Route path="members" element={<TrainerMembers />} />
+        <Route path="attendance" element={<Attendance />} />
       </Route>
 
       {/* Member Routes */}
