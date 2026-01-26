@@ -32,8 +32,8 @@ export default function AddSession() {
     };
 
     return (
-        <div className="max-w-xl bg-gray-800 p-6 rounded">
-            <h2 className="text-xl font-bold mb-4">Schedule Session</h2>
+        <div className="max-w-xl bg-gray-800 p-6 rounded ">
+            <h2 className="text-xl font-bold mb-4 text-gray-400">Schedule Session</h2>
 
             <form onSubmit={handleSubmit} className="space-y-4">
                 <input 

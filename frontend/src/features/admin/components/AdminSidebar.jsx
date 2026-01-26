@@ -16,6 +16,7 @@ export default function AdminSidebar() {
             <li><NavLink to="/dashboard/admin">Dashboard</NavLink></li>
             <li><NavLink to="/dashboard/admin/members">Members</NavLink></li>
             <li><NavLink to="/dashboard/admin/trainers">Trainers</NavLink></li>
+            <li><NavLink to="/dashboard/admin/trainers/add">Add Trainer</NavLink></li>
         </ul>
     );
 }

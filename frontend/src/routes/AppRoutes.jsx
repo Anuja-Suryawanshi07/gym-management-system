@@ -13,8 +13,9 @@ import AdminDashboard from "../features/admin/pages/AdminDashboard";
 import MembershipRequests from "../features/admin/pages/MembershipRequests";
 import Members from "../features/admin/pages/Members";
 import MemberDetails from "../features/admin/pages/MemberDetails";
-import Trainers from "../features/admin/pages/Trainers";
+
 import TrainerDetails from "../features/admin/pages/TrainerDetails";
+import TrainerList from "../features/admin/pages/TrainerList";
 import AddTrainer from "../features/admin/pages/AddTrainer";
 import EditTrainer from "../features/admin/pages/EditTrainer";
 import Plans from "../features/admin/pages/Plans";
@@ -28,7 +29,9 @@ import Sessions from "../features/trainers/pages/Sessions";
 import AddSession from "../features/trainers/pages/AddSession";
 import EditSession from "../features/trainers/pages/EditSession";
 import TrainerMembers from "../features/trainers/pages/TrainerMembers";
-import Attendance from "../features/trainers/pages/Attendance";
+//import Attendance from "../features/trainers/pages/Attendance";
+import TrainerAttendance from "../features/trainers/pages/TrainerAttendance";
+
 
 /* Member */
 import MemberLayout from "../features/members/layout/MemberLayout";
@@ -57,13 +60,15 @@ function AppRoutes() {
         <Route path="membership-requests" element={<MembershipRequests />} />
         <Route path="members" element={<Members />} />
         <Route path="members/:id" element={<MemberDetails />} />
-        <Route path="trainers" element={<Trainers />} />
+        
+        <Route path="trainers" element={<TrainerList />} />
         <Route path="trainers/add" element={<AddTrainer />} />
         <Route path="trainers/:id" element={<TrainerDetails />} />
         <Route path="trainers/:id/edit" element={<EditTrainer />} />
         <Route path="plans" element={<Plans />} />
         <Route path="plans/add" element={<AddPlan />} />
         <Route path="plans/:id/edit" element={<EditPlan />} />
+        
       </Route>
 
       {/* Trainer Routes */}
@@ -80,7 +85,7 @@ function AppRoutes() {
         <Route path="sessions/add" element={<AddSession />} />
         <Route path="sessions/:id/edit" element={<EditSession />} />
         <Route path="members" element={<TrainerMembers />} />
-        <Route path="attendance" element={<Attendance />} />
+        <Route path="attendance" element={<TrainerAttendance />} />
       </Route>
 
       {/* Member Routes */}

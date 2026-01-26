@@ -66,3 +66,8 @@ export const updateMembershipDates = (userId, dates) =>
 
   export const deleteTrainer = (id) =>
     axios.delete(`/admin/trainers/${id}`);
+  export const getAdminDashboardStats = () =>
+    axios.get("/admin/dashboard/stats");
+
+  export const deactivateTrainer = (trainerId) =>
+    axios.put(`/admin/trainers/${trainerId}`,{ status: "inactive",});

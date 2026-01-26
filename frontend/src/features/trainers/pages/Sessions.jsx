@@ -46,9 +46,9 @@ export default function Sessions() {
   };
 
   return (
-    <div>
+    <div className="bg-gray-800 rounded px-4 py-2">
       <div className="flex justify-between mb-4">
-        <h2 className="text-xl font-bold">My Sessions</h2>
+        <h2 className="text-gray-400 font-bold">My Sessions</h2>
         <button
           onClick={() => navigate("/trainer/sessions/add")}
           className="bg-blue-500 px-4 py-2 rounded"
@@ -57,7 +57,7 @@ export default function Sessions() {
         </button>
       </div>
 
-      <table className="w-full text-left">
+      <table className="w-full text-left text-gray-400">
         <thead>
           <tr className="border-b border-gray-700">
             <th>Member</th>
