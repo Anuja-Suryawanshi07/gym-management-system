@@ -742,7 +742,7 @@ exports.updateMemberProfile = async (req, res) => {
     console.log("UPDATE MEMBER:", user_id, req.body);
 
 
-    // ✅ Destructure with DEFAULT null (VERY IMPORTANT)
+    //  Destructure with DEFAULT null (VERY IMPORTANT)
     const {
         assigned_trainer_id,
         current_plan_id,
@@ -1210,5 +1210,44 @@ exports.sendPaymentReminder = async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Failed to send reminder" });
+    }
+};
+exports.getAdminDashboardStats = async (req, res) => {
+    try {
+        // Total Members
+        const [[totalMembers]] = await db.execute(
+            `SELECT COUNT(*) AS total FROM users WHERE role = 'member'`
+        );
+        // Active Trainers    
+        const [[activeTrainers]] = await db.execute(
+            `SELECT COUNT(*) AS total FROM users WHERE role = 'trainer'`
+        );
+
+        // Expired Memberships
+        const [[expiredMemberships]] = await db.execute(
+            `SELECT COUNT(*) AS total
+            FROM member_profiles
+            WHERE membership_end_date < CURDATE()`
+        );
+
+        // Currently Checked-in Members
+        const [[checkedInNow]] = await db.execute(
+         `SELECT COUNT(*) AS total
+            FROM attendance
+            WHERE check_out_at IS NULL`
+        );
+
+        res.status(200).json({
+            success: true,
+            stats: {
+            totalMembers: totalMembers.total,
+            activeTrainers: activeTrainers.total,
+            expiredMemberships: expiredMemberships.total,
+            checkedInNow: checkedInNow.total,
+            },
+        });
+    } catch (error) {
+        console.error("Admin dashboard stats error:", error);
+        res.status(500).json({ message: "failed to load admin dashboard stats", });
     }
 };

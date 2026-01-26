@@ -9,7 +9,10 @@ const { getMembers,
     updateMemberProfile, 
     updateMemberStatus, 
     updateMembershipDates, 
-    sendPaymentReminder } 
+    sendPaymentReminder,
+    getAdminDashboardStats,
+    createTrainerProfile, 
+} 
 = require("../controllers/adminController");
 
 // MIDDLEWARE APPLICATION
@@ -134,5 +137,8 @@ router.post(
 
 router.get("/trainers", authenticate,isAdmin, adminController.getTrainers);
 router.get("/plans", authenticate, isAdmin, adminController.getPlans);
+
+router.get("/dashboard/stats", getAdminDashboardStats);
+
 
 module.exports = router;
