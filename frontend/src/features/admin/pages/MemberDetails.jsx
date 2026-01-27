@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import {
   getMemberById,
   getTrainers,
-  getPlans,
+  getAllPlans,
   assignTrainerAndPlan,
   updateMemberStatus,
   updateMembershipDates,
@@ -68,7 +68,7 @@ export default function MemberDetails() {
       try {
         const [trainerRes, planRes] = await Promise.all([
           getTrainers(),
-          getPlans(),
+          getAllPlans(),
         ]);
 
         setTrainers(trainerRes.data.trainers);

@@ -16,7 +16,8 @@ export const getMemberById =(id) =>
   axios.get(`/admin/members/${id}`);
 
 export const getTrainers = () => axios.get("/admin/trainers");
-export const getPlans = () => 
+
+export const getAllPlans = () => 
   axios.get("/admin/plans");
 
 export const getPlanById = (id) =>
