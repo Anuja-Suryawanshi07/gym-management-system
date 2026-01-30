@@ -22,6 +22,7 @@ import Plans from "../features/admin/pages/Plans";
 import AddPlan from "../features/admin/pages/AddPlan";
 import EditPlan from "../features/admin/pages/EditPlan";
 
+
 /* Trainer */
 import TrainerLayout from "../features/trainers/layout/TrainerLayout";
 import TrainerDashboard from "../features/trainers/pages/TrainerDashboard";
@@ -36,6 +37,10 @@ import TrainerAttendance from "../features/trainers/pages/TrainerAttendance";
 /* Member */
 import MemberLayout from "../features/members/layout/MemberLayout";
 import MemberDashboard from "../features/members/pages/MemberDashboard";
+import MyPlan from "../features/members/pages/MyPlan";
+import MyAttendance from "../features/members/pages/MyAttendance";
+import MyPayments from "../features/members/pages/MyPayments";
+import MySessions from "../features/members/pages/MySessions";
 
 function AppRoutes() {
   return (
@@ -98,6 +103,10 @@ function AppRoutes() {
         }
       >
         <Route index element={<MemberDashboard />} />
+          <Route path="plan" element={<MyPlan />} />
+          <Route path="sessions" element={<MySessions />} />
+          <Route path="attendance" element={<MyAttendance />} />
+          <Route path="payments" element={<MyPayments />} />
       </Route>
 
     </Routes>

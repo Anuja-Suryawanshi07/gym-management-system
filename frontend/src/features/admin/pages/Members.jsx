@@ -1,33 +1,31 @@
 import { useEffect, useState } from "react";
+import { getMembers, sendPaymentReminder } from "../services/adminApi";
 import { useNavigate } from "react-router-dom";
-import { Link } from "react-router-dom";
-import { getMembers } from "../services/adminApi";
-import { sendPaymentReminder } from "../../admin/services/adminApi";
-import { toast } from "react-hot-toast";
+import { Eye } from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function Members() {
   const [members, setMembers] = useState([]);
-  const [loading, setloading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  const fetchMembers = async () => {
+    try {
+      const res = await getMembers();
+      setMembers(res.data.members || []);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to load members");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchMembers = async () => {
-      try {
-        const res = await getMembers();
-        setMembers(res.data.members);
-      } catch (err) {
-        console.error(err);
-        toast.error("Failed to load members");
-      } finally {
-        setloading(false);
-      }
-    };
     fetchMembers();
   }, []);
 
   const handleReminder = async (id) => {
-   console.log("REMINDER CLICKED FOR:", id);
-
     try {
       await sendPaymentReminder(id);
       toast.success("Payment reminder sent");
@@ -37,32 +35,23 @@ export default function Members() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm("Are you sure you want to delete this member?")) return;
-
-    try {
-      await api.delete(`/admin/users/${id}`);
-      toast.success("Member deleted");
-      fetchMembers();
-    } catch {
-      toast.error("Delete failed");
-    }
-  };
-
-  if (loading) return <p className="p-6 text-white">Loading members...</p>;
+  if (loading) {
+    return <p className="p-6 text-gray-400">Loading members...</p>;
+  }
 
   return (
-    <div className="p-6 text-white">
+    <div className="p-6">
       <h1 className="text-2xl font-bold mb-6">Members</h1>
 
-      <table className="w-full bg-gray-800 rounded">
-        <thead>
-          <tr className="bg-gray-900">
+      <table className="w-full border border-gray-700 text-left">
+        <thead className="bg-gray-800">
+          <tr>
             <th className="p-3">Name</th>
             <th className="p-3">Email</th>
             <th className="p-3">Plan</th>
             <th className="p-3">Trainer</th>
-            <th className="p-3">Actions</th>
+            <th className="p-3">Status</th>
+            <th className="p-3">Action</th>
           </tr>
         </thead>
 
@@ -70,59 +59,67 @@ export default function Members() {
           {members.map((m) => (
             <tr
               key={m.user_id}
-              className={`border-t border-gray-700
-        ${m.is_expired ? "bg-red-900/40" : "hover:bg-gray-700/50"}
-      `}
+              className={`border-t border-gray-700 ${
+                m.is_expired ? "bg-red-900/30" : "hover:bg-gray-700/40"
+              }`}
             >
-              {/* Name + Expiry Actions */}
+              {/* Name + Expired Badge */}
               <td className="p-3 flex items-center gap-2">
                 <span>{m.full_name}</span>
 
                 {m.is_expired && (
                   <>
+                    <span className="bg-red-600 text-xs px-2 py-0.5 rounded-full font-bold">
+                      EXPIRED
+                    </span>
+
                     <button
                       onClick={() => handleReminder(m.user_id)}
-                      className="bg-yellow-400 px-3 py-1 rounded text-black font-bold"
+                      className="bg-yellow-400 px-2 py-0.5 rounded text-black text-xs font-semibold"
                     >
                       Remind
                     </button>
-
-                    <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded-full font-bold">
-                      EXPIRED
-                    </span>
                   </>
                 )}
               </td>
 
               <td className="p-3">{m.email}</td>
-              <td className="p-3">{m.current_plan_name || "-"}</td>
-              <td className="p-3">{m.assigned_trainer_name || "-"}</td>
+              <td className="p-3">{m.current_plan_name || "—"}</td>
+              <td className="p-3">{m.assigned_trainer_name || "—"}</td>
 
-              <td className="p-3 flex gap-2">
-                <button
-                  onClick={() => navigate(`/admin/members/${m.user_id}`)}
-                  disabled={m.is_expired}
-                  className="bg-blue-500 px-3 py-1 rounded text-black font-semibold hover:bg-blue-600 disabled:opacity-50"
+              <td className="p-3">
+                <span
+                  className={`px-2 py-1 rounded text-xs font-semibold ${
+                    m.membership_status === "Active"
+                      ? "bg-green-600"
+                      : "bg-gray-600"
+                  }`}
                 >
-                  View
-                </button>
+                  {m.membership_status}
+                </span>
+              </td>
 
+              {/* Actions */}
+              <td className="p-3">
                 <button
-                onClick={() => navigate(`/dashboard/admin/members/${m.user_id}`)} 
-                className= "bg-blue-500 px-3 py-1 rounded text-white"
+                  onClick={() =>
+                    navigate(`/dashboard/admin/members/${m.user_id}`)
+                  }
+                  className="bg-blue-500 p-2 rounded hover:bg-blue-600"
                 >
-                  Edit
-                </button>
-
-                <button
-                  onClick={() => handleDelete(m.user_id)}
-                 className="bg-red-500 px-3 py-1 rounded text-white"
-                >
-                  Delete
+                  <Eye size={16} />
                 </button>
               </td>
             </tr>
           ))}
+
+          {members.length === 0 && (
+            <tr>
+              <td colSpan="6" className="p-4 text-center text-gray-400">
+                No members found
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
     </div>
