@@ -44,8 +44,8 @@ exports.getMemberProfile = async (req, res) => {
                 -- Member Profile Fields (Crucially including the newly added columns)
                 mp.membership_status,
                 mp.health_goals,
-                mp.membership_start_date,
-                mp.membership_end_date,
+                DATE_FORMAT(mp.membership_start_date, '%Y-%m-%d') AS membership_start_date,
+                DATE_FORMAT(mp.membership_end_date, '%Y-%m-%d') AS membership_end_date,
                 mp.current_plan_id, -- Used for Plan join
                 mp.assigned_trainer_id, -- Used for Trainer join
                 
@@ -67,11 +67,12 @@ exports.getMemberProfile = async (req, res) => {
             WHERE u.id = ?`,
             [memberUserId]
         );
+        
 
         if (rows.length === 0) {
             return res.status(404).json({ message: "Member profile not found." });
         }
-        
+        console.log("Member Profile Query Result:", rows);
         res.status(200).json({
             message: "Member profile fetched successfully.",
             profile: rows[0]
@@ -126,34 +127,58 @@ exports.getMemberPlan = async (req, res) => {
     const memberUserId = req.user.id;
 
     try {
-        // First, find the current plan ID from the member_profiles table
+        // 1. Fetch current plan + properly formatted membership dates
         const [memberProfile] = await db.execute(
-            "SELECT current_plan_id, membership_start_date, membership_end_date FROM member_profiles WHERE user_id = ?",
+            `
+            SELECT 
+                current_plan_id,
+                DATE_FORMAT(membership_start_date, '%Y-%m-%d') AS membership_start_date,
+                DATE_FORMAT(membership_end_date, '%Y-%m-%d') AS membership_end_date
+            FROM member_profiles
+            WHERE user_id = ?
+            `,
             [memberUserId]
         );
 
         if (memberProfile.length === 0 || !memberProfile[0].current_plan_id) {
-            return res.status(404).json({ message: "No active membership plan found for this member." });
+            return res.status(404).json({
+                message: "No active membership plan found for this member."
+            });
         }
 
-        const planId = memberProfile[0].current_plan_id;
-        const { membership_start_date, membership_end_date } = memberProfile[0];
+        const {
+            current_plan_id: planId,
+            membership_start_date,
+            membership_end_date
+        } = memberProfile[0];
 
-        // Then, fetch the full plan details
+        // 2. Fetch plan details
         const [planDetails] = await db.execute(
-            "SELECT id, plan_name, price, duration_months, description, created_at FROM plans WHERE id = ?",
+            `
+            SELECT 
+                id,
+                plan_name,
+                duration_months,
+                price,
+                description,
+                status
+            FROM plans
+            WHERE id = ?
+            `,
             [planId]
         );
 
         if (planDetails.length === 0) {
-            return res.status(404).json({ message: "Plan details not found (Plan ID exists but record is missing)." });
+            return res.status(404).json({
+                message: "Plan details not found (Plan ID exists but record is missing)."
+            });
         }
-        
-        // Combine plan details with enrollment dates from the member_profiles table
+
+        // 3. Combine plan + membership dates
         const finalPlanDetails = {
             ...planDetails[0],
-            membership_start_date: membership_start_date,
-            membership_end_date: membership_end_date
+            membership_start_date,
+            membership_end_date
         };
 
         res.status(200).json({
@@ -169,6 +194,7 @@ exports.getMemberPlan = async (req, res) => {
         });
     }
 };
+  
 
 // --- 4. INITIATE PLAN RENEWAL (Self-Access) ---
 // Route: POST /api/member/renew
@@ -305,32 +331,47 @@ exports.getMemberPayments = async (req, res) => {
 // --- 6. GET MEMBER SCHEDULED SESSIONS ---
 // Route: GET /api/member/sessions
 exports.getMemberSessions = async (req, res) => {
-    const memberUserId = req.user.id;
+  const memberUserId = req.user.id;
 
-    try {
-        const [sessions] = await db.execute(
-            `SELECT
-                s.id AS session_id,
-                s.session_time,
-                s.duration_minutes,
-                s.status,
-                s.notes,
-                t.full_name AS trainer_name
-            FROM sessions s
-            LEFT JOIN users t ON s.trainer_id = t.id AND t.role = 'trainer'
-            WHERE s.member_id = ?
-            ORDER BY s.session_time DESC`,
-            [memberUserId]
-        );
+  try {
+    const [sessions] = await db.execute(
+      `
+      SELECT
+        s.id AS session_id,
 
-        res.status(200).json({
-            message: "Scheduled sessions fetched successfully.",
-            count: sessions.length,
-            sessions: sessions
-        });
+        DATE_FORMAT(s.session_date, '%Y-%m-%d') AS session_date,
+        TIME_FORMAT(s.session_time, '%h:%i %p') AS session_time,
 
-    } catch (error) {
-        console.error("Error fetching member sessions:", error);
-        res.status(500).json({ message: "Server error while retrieving session data." });
-    }
+        s.duration_minutes,
+        s.status,
+        s.notes,
+
+        u.full_name AS trainer_name,
+        tp.specialty AS trainer_specialty
+
+      FROM sessions s
+      JOIN users u 
+        ON s.trainer_user_id = u.id
+        AND u.role = 'trainer'
+      LEFT JOIN trainer_profiles tp 
+        ON tp.user_id = u.id
+
+      WHERE s.member_user_id = ?
+      ORDER BY s.session_date DESC, s.session_time DESC
+      `,
+      [memberUserId]
+    );
+
+    res.status(200).json({
+      message: "Member sessions fetched successfully",
+      count: sessions.length,
+      sessions
+    });
+
+  } catch (error) {
+    console.error("Error fetching member sessions:", error);
+    res.status(500).json({
+      message: "Server error while retrieving session data"
+    });
+  }
 };
