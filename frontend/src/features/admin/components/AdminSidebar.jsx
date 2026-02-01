@@ -13,7 +13,7 @@ const menu = [
 
 const linkClass = ({ isActive }) =>
    `flex items-center gap-3 px-4 py-2 rounded-md transition
-   ${isActive ? "bg-blue-600 text-white" : "text-gray-300 hover:bg-gray-700"}`;
+   ${isActive ? "bg-blue-600 text-white" : "text-gray-300 hover:bg-gray-800"}`;
 export default function AdminSidebar() {
   return (
     <nav className="space-y-2">

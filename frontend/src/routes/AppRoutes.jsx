@@ -13,7 +13,6 @@ import AdminDashboard from "../features/admin/pages/AdminDashboard";
 import MembershipRequests from "../features/admin/pages/MembershipRequests";
 import Members from "../features/admin/pages/Members";
 import MemberDetails from "../features/admin/pages/MemberDetails";
-
 import TrainerDetails from "../features/admin/pages/TrainerDetails";
 import TrainerList from "../features/admin/pages/TrainerList";
 import AddTrainer from "../features/admin/pages/AddTrainer";

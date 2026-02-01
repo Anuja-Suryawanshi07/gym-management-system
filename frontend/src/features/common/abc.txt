@@ -1,0 +1,3 @@
+Width: 260px (w-64)
+Background: bg-gray-900
+Border: border-r border-gray-800

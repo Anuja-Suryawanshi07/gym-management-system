@@ -3,9 +3,11 @@ import MemberSidebar from "../components/MemberSidebar";
 
 export default function MemberLayout() {
     return (
-        <div className="flex">
+        <div className="flex min-h-screen bg-gray-950 text-white">
+          <aside className="w-64 bg-gray-900 border-r border-gray-800 p-5">
             <MemberSidebar />
-            <main className="ml-64 p-6 w-full bg-gray-100 min-h-screen">
+          </aside>
+            <main className="flex-1 p-6 overflow-y-auto">
                 <Outlet />
             </main>
         </div>

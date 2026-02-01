@@ -10,8 +10,8 @@ export default function TrainerSidebar() {
   };
 
   const linkClass = ({ isActive}) =>
-    `block px-3 py-2 rounded ${
-      isActive ? "bg-gray-800 text-blue-400" : "hover:bg-gray-800"
+    `flex items-center gap-3 px-3 py-2 rounded-md transition
+   ${isActive ? "bg-blue-600 text-white" : "text-gray-300 hover:bg-gray-800"
     }`;
   return (
     <div className="fixed left-0 top-0 h-screen w-64 bg-gray-900 text-white p-4">
