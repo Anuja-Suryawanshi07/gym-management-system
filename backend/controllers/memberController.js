@@ -94,32 +94,40 @@ exports.getMemberAttendance = async (req, res) => {
 
     try {
         // Query to fetch attendance records and the name of the trainer who checked them in.
-        const [attendanceRecords] = await db.execute(
+        const [rows] = await db.execute(
             `SELECT
-                a.check_in_time,
-                a.trainer_id,
-                u.full_name AS checked_in_by_trainer_name
-            FROM attendance a
-            LEFT JOIN users u ON a.trainer_id = u.id
-            WHERE a.member_id = ?
-            ORDER BY a.check_in_time DESC`,
-            [memberUserId]
+                a.id AS attendance_id,
+                DATE_FORMAT(a.check_in_at, '%Y-%m-%d') AS date,
+                TIME_FORMAT(a.check_in_at, '%h:%i %p') AS check_in_time,
+                TIME_FORMAT(a.check_out_at, '%h:%i %p') AS check_out_time,
+
+                TIMESTAMPDIFF (
+                    MINUTE,
+                    a.check_in_at,
+                    a.check_out_at
+                ) AS duration_minutes,
+
+                a.notes,
+                u.full_name AS trainer_name
+                FROM attendance a
+                LEFT JOIN users u ON a.trainer_id = u.id
+                WHERE a.member_id = ?
+                ORDER BY a.check_in_at DESC `,
+                [memberUserId]
         );
 
         res.status(200).json({
             message: "Attendance history fetched successfully.",
-            count: attendanceRecords.length,
-            history: attendanceRecords
+            count: rows.length,
+            attendance: rows
         });
-
     } catch (error) {
         console.error("Error fetching member attendance:", error);
         res.status(500).json({
-            message: "Server error while retrieving attendance data.",
-            error: error.message
+            message: "Server error while retrieving attendance data."
         });
-    }
-};
+    }    
+};   
 
 // --- 3. GET CURRENT MEMBERSHIP PLAN DETAILS ---
 // Route: GET /api/member/plan
@@ -324,7 +332,7 @@ exports.getMemberPayments = async (req, res) => {
 
     } catch (error) {
         console.error("Error fetching member payments:", error);
-        res.status(500).json({ message: "Server error while retrieving payment data." });
+        res.status(500).json({ message: "Server error while fetching payments." });
     }
 };
 
