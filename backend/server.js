@@ -9,16 +9,27 @@ const trainerRoutes = require('./routes/trainerRoutes');
 const memberRoutes = require('./routes/memberRoutes');
 const authRoutes = require('./routes/authRoutes');
 const membershipRequestRoutes = require("./routes/membershipRequestRoutes");
+const paymentRoutes = require('./routes/paymentRoutes');
+const planRoutes = require("./routes/planRoutes");
+
+
 // --- CORS CONFIGURATION ---
 // This tells the browser that requests from your frontend origin are allowed
 app.use(cors({
-  origin: 'http://localhost:5173', // Replace with your frontend URL (e.g., http://localhost:3000)
+  origin: 'http://localhost:5173', 
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
+// payment route
+app.use('/api/payments/webhook', express.raw({ type: "application/json" }), paymentRoutes);
+
 //Middleware to parse JSON bodies
 app.use(express.json());
+
+app.use('/api/payments', paymentRoutes);
+app.use("/api/plans", planRoutes);
+
 // Middleware to parse URL-encoded form data
 app.use(express.urlencoded({ extended: true }));
 app.use((req, res, next) => {
@@ -64,11 +75,18 @@ app.get('/api/users', async (req , res) => {
         });
     }
 });
+
 // Basic health check or root message
 app.get('/', (req, res) => {
     res.send('<h1>Gym Management System Backend is Running!</h1>');
 });
 
+
+
 app.listen(PORT, () => {
     console.log(`Server is listening at http://localhost:${PORT}`);
 });
+
+
+
+

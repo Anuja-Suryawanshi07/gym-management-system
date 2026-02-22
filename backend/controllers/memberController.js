@@ -1,3 +1,4 @@
+const { message } = require('statuses');
 const db = require('../config/db');
 
 // --- Utility Function for Date Calculation ---
@@ -209,99 +210,175 @@ exports.getMemberPlan = async (req, res) => {
 // This simulates the successful confirmation of a renewal payment.
 exports.initiateRenewal = async (req, res) => {
     const memberUserId = req.user.id;
-    // For simplicity, we assume the renewal is for the current plan, as is common in gym models.
-    
+
     try {
-        // 1. Get member's current plan info
+        // 1. Get member plan info
         const [memberData] = await db.execute(
-            `SELECT 
-            current_plan_id,
-            membership_end_date
-            FROM member_profiles
-            WHERE user_id = ?`,
+            `SELECT current_plan_id, membership_end_date
+             FROM member_profiles
+             WHERE user_id = ?`,
             [memberUserId]
         );
 
         if (memberData.length === 0) {
             return res.status(404).json({ message: "Member profile not found." });
         }
+
         const { current_plan_id, membership_end_date } = memberData[0];
 
         if (!current_plan_id) {
             return res.status(400).json({
-                message: "Renewal failed: Member does not have an active plan to renew."
+                message: "No active plan found to renew."
             });
         }
-        
-        // 2. Get the duration of the current plan to calculate the new end date 
-        const [planDetails] = await db.execute(
-            `SELECT duration_months FROM plans WHERE id = ?`,
+
+        // 2. Get plan details
+        const [planRows] = await db.execute(
+            `SELECT duration_months, price FROM plans WHERE id = ?`,
             [current_plan_id]
         );
 
-        if (planDetails.length === 0) {
-            return res.status(500).json({
-                message: "Configuration Error: Assigned plan details could not be retrieved."
-            });
-        }
-        const duration = planDetails[0].duration_months;
-
-        // Calculate the new end date
-        let renewalStartDate;
-        
-        // Determine the start date for the new period:
-        if (!membership_end_date || new Date(membership_end_date) < new Date()) {
-            // Case 1: Plan is null or expired. Renewal starts today.
-            renewalStartDate = new Date().toISOString().split('T')[0];
-        } else {
-             // Case 2: Plan is active. Renewal starts the day after the current end date.
-            const endDate = new Date(membership_end_date + 'T00:00:00'); // Add time to avoid date shift
-            // Increment the end date by one day
-            endDate.setDate(endDate.getDate() + 1); 
-            renewalStartDate = endDate.toISOString().split('T')[0];
+        if (planRows.length === 0) {
+            return res.status(500).json({ message: "Plan not found." });
         }
 
-        const newEndDate = addMonths(renewalStartDate, duration);
+        const { duration_months, price } = planRows[0];
 
-        // 3. Update the member profile
-        const [result] = await db.execute(
+        // 3. Calculate new end date safely
+        let startDate = new Date();
+
+        if (membership_end_date) {
+            const endDate = new Date(membership_end_date + "T00:00:00");
+            if (endDate > startDate) startDate = endDate;
+        }
+
+        const newEndDate = new Date(startDate);
+        newEndDate.setMonth(newEndDate.getMonth() + duration_months);
+
+        const formattedEndDate = newEndDate.toISOString().split("T")[0];
+
+        // 4. Update member profile
+        await db.execute(
             `UPDATE member_profiles
-            SET 
-            membership_status = 'Active',
-            membership_end_date = ?
-            WHERE user_id = ?`,
-            [newEndDate, memberUserId]
+             SET membership_status = 'Active',
+                 membership_end_date = ?
+             WHERE user_id = ?`,
+            [formattedEndDate, memberUserId]
         );
-        
-        if (result.affectedRows === 0) {
-            return res.status(500).json({
-                message: "Renewal database update failed. Check member profile existence."
-            });
-        }
-        
-        // 4. (SIMULATED) Record a payment for the renewal
-        const renewalPrice = 500; // Placeholder, in a real app this would come from the 'plans' table
+
+        // 5. Insert payment (FIXED)
         const [paymentResult] = await db.execute(
-            `INSERT INTO payments (member_id, plan_id, amount, payment_date, payment_method, status)
-            VALUES (?, ?, ?, NOW(), 'Credit Card (Auto-Renew)', 'Completed')`,
-            [memberUserId, current_plan_id, renewalPrice]
+            `INSERT INTO payments
+             (member_id, enrollment_id, plan_id, amount, payment_date, payment_method, status)
+             VALUES (?, NULL, ?, ?, NOW(), 'Stripe', 'success')`,
+            [memberUserId, current_plan_id, price]
         );
 
         res.status(200).json({
-            message: "Plan renewed successfully. Membership end date extended.",
-            user_id: memberUserId,
-            new_end_date: newEndDate,
-            plan_id: current_plan_id,
+            message: "Plan renewed successfully",
+            new_end_date: formattedEndDate,
             payment_id: paymentResult.insertId
         });
+
     } catch (error) {
         console.error("Error initiating plan renewal:", error);
         res.status(500).json({
-            message: "Server error during plan renewal process.",
+            message: "Server error during renewal",
             error: error.message
         });
     }
 };
+
+// --- 5. Change plan
+// Route: POST /api/member/change-plan
+
+exports.changePlan = async (req, res) => {
+    const memberUserId = req.user.id;
+    const { new_plan_id } = req.body;
+
+    if (!new_plan_id) {
+        return res.status(400).json({ message: "New plan ID is required" });
+    }
+
+    try {
+        // 1. Get current member plan
+        const [memberRows] = await db.execute(
+            `SELECT current_plan_id
+            FROM member_profiles
+            WHERE user_id = ?`,
+            [memberUserId]
+        );
+        
+        if (memberRows.length === 0) {
+            return res.status(404).json({ message: "Member profile not found" });
+        }
+
+        const currentPlanId = memberRows[0].current_plan_id;
+
+        if (currentPlanId === new_plan_id) {
+            return res.status(400).json({
+                message:"You are already on this plan"
+            });
+        }
+
+        // 2. Get new plan details
+        const [planRows] = await db.execute(
+            `SELECT duration_months, price, plan_name
+            FROM plans
+            WHERE id = ?`,
+            [new_plan_id]
+        );
+
+        if (planRows.length === 0) {
+            return res.status(404).json({ message: "Select plan not found" });
+        }
+        const { duration_months, price, plan_name } = planRows[0];
+
+        // 3. Calculate dates
+        const startDate = new Date();
+        const endDate = new Date();
+        endDate.setMonth(endDate.getMonth() + duration_months);
+        
+        const formattedStartDate = startDate.toISOString().split("T")[0];
+        const formattedEndDate = endDate.toISOString().split("T")[0];
+
+        // 4. Update member profile
+        await db.execute(
+            `UPDATE member_profiles
+            SET current_plan_id = ?,
+                membership_status = 'Active',
+                membership_start_date = ?,
+                membership_end_date = ?
+            WHERE user_id = ?`,
+            [new_plan_id, formattedStartDate, formattedEndDate, memberUserId]
+        );
+
+        // 5. Insert payment record
+        const [paymentResult] = await db.execute(
+            `INSERT INTO payments
+            (member_id, enrollment_id, plan_id, amount, payment_date, payment_method, status)
+            VALUES (?, NULL, ?, ?, NOW(), 'Strip', 'success')`,
+            [memberUserId, new_plan_id, price]
+        );
+
+        res.status(200).json({
+            message: "Plan changed successfully",
+            new_plan: plan_name,
+            start_date: formattedStartDate,
+            end_date: formattedEndDate,
+            payment_id: paymentResult.insertId
+
+        });
+    } catch (error) {
+        console.error("Error changing plan:", error);
+        res.status(500).json({
+            message: "Server error while changing plan",
+            error: error.message
+        });
+    }
+};
+
+
 
 // --- 5. GET MEMBER PAYMENT HISTORY ---
 // Route: GET /api/member/payments
