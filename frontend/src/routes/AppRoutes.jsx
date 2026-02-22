@@ -41,6 +41,12 @@ import MyAttendance from "../features/members/pages/MyAttendance";
 import MyPayments from "../features/members/pages/MyPayments";
 import MySessions from "../features/members/pages/MySessions";
 
+/* Payments */
+import SelectPlan from "../pages/SelectPlan";
+import PaymentSuccess from "../pages/PaymentSuccess";
+import PaymentCancel from "../pages/PaymentCancel";
+
+
 function AppRoutes() {
   return (
     <Routes>
@@ -107,6 +113,11 @@ function AppRoutes() {
           <Route path="attendance" element={<MyAttendance />} />
           <Route path="payments" element={<MyPayments />} />
       </Route>
+
+      <Route path="/select-plan" element={<SelectPlan />} />
+      <Route path="/payment-success" element={<PaymentSuccess />} />
+      <Route path="/payment-cancel" element={<PaymentCancel />} />
+      
 
     </Routes>
   );

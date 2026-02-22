@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import logoImg from "../assets/images/logo1.png";
 
 function Navbar() {
   return (
@@ -7,21 +8,18 @@ function Navbar() {
         {/* Logo */}
         <Link
           to="/"
-          className="text-2xl font-bold flex flex-row items-baseline gap-72 text-yellow-400"
+          className="flex items-center gap-3 hover:opacity-90 transition-opacity"
         >
-          <span>GymPro</span>
+          {/* 2. Add the Image Tag */}
+          <img 
+            src={logoImg} 
+            alt="Core Strength Logo" 
+            className="h-14 w-auto object-contain" 
+          />
+          <span className="text-2xl font-bold text-yellow-400 tracking-tight">
+            CORE STRENGTH
+          </span>
           
-          {/* <div>
-            <h1 className="text-lg md:text-xl font-medium">
-            Transform Your Body. Transform Your Life.
-            </h1>
-            
-            <p className="text-lg md:text-sm font-medium">
-            Join our gym today and get expert trainers, modern equipment, and
-            personalized fitness plans.
-            </p>
-        
-          </div>   */}
         </Link>
 
         {/* Menu */}

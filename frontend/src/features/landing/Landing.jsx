@@ -1,5 +1,5 @@
 import Navbar from "../../components/Navbar";
-import gymImage from "../../assets/images/gym-hero.png";
+import gymImage from "../../assets/images/gympic2.jpeg";
 import { Link } from "react-router-dom";
 
 function Landing() {

@@ -48,7 +48,7 @@ function RequestMembership() {
 
     if (submitted) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-100">
+            <div className="min-h-screen flex items-center justify-center bg-gray-900">
                 <div className="bg-white p-8 rounded shadow-md text-center">
                     <h2 className="text-2xl font-bold mb-2">Request Submitted </h2>
                     <p className="text-gray-600">
@@ -60,7 +60,7 @@ function RequestMembership() {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="min-h-screen flex items-center justify-center bg-gray-900">
             <form
                 onSubmit={handleSubmit}
                 className="bg-white p-8 rounded-lg w-full max-w-md"

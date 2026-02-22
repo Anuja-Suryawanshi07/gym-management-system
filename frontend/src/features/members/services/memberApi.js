@@ -17,3 +17,9 @@ export const getMemberPayments = () =>
 
 export const renewMembership = () =>
     axios.post("/member/renew");
+
+export const changePlan = (planId) => 
+    axios.post("/payments/create-checkout-session", 
+        {plan_id : planId,
+            payment_method: "Stripe"
+        });
