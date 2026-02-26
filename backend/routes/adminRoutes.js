@@ -15,6 +15,7 @@ const { getMembers,
 } 
 = require("../controllers/adminController");
 
+
 // MIDDLEWARE APPLICATION
 
 // --- APPLY SECURITY TO ALL ADMIN ROUTES ---
@@ -135,10 +136,10 @@ router.post(
     sendPaymentReminder
 );
 
-router.get("/trainers", authenticate,isAdmin, adminController.getTrainers);
-router.get("/plans", authenticate, isAdmin, adminController.getPlans);
+router.get("/trainers", adminController.getTrainers);
+router.get("/plans", adminController.getPlans);
 
 router.get("/dashboard/stats", getAdminDashboardStats);
-
+router.get('/sessions', adminController.getAllSessions);
 
 module.exports = router;

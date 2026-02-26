@@ -884,21 +884,26 @@ exports.getAllSessions = async (req, res) => {
         const [rows] = await db.query(`
             SELECT 
                 s.id AS session_id,
-                s.session_time,
+                -- Combining date and time for the frontend
+                CONCAT(s.session_date, ' ', s.session_time) AS session_time,
                 s.duration_minutes,
                 s.status,
                 s.notes,
                 m.full_name AS member_name,
                 t.full_name AS trainer_name
             FROM sessions s
-            JOIN users m ON s.member_id = m.id AND m.role = 'member'
-            JOIN users t ON s.trainer_id = t.id AND t.role = 'trainer'
-            ORDER BY s.session_time DESC
+            JOIN users m ON s.member_user_id = m.id
+            JOIN users t ON s.trainer_user_id = t.id
+            ORDER BY s.session_date DESC, s.session_time DESC
         `);
+        
         res.status(200).json({ sessions: rows });
     } catch (error) {
-        console.error("Error fetching all sessions:", error);
-        res.status(500).json({ message: "Error fetching sessions", error: error.message });
+        console.error("Error fetching sessions:", error);
+        res.status(500).json({ 
+            message: "Error fetching sessions", 
+            error: error.message 
+        });
     }
 };
 
