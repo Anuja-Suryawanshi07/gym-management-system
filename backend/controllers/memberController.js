@@ -1,4 +1,3 @@
-const { message } = require('statuses');
 const db = require('../config/db');
 
 // --- Utility Function for Date Calculation ---
@@ -423,24 +422,19 @@ exports.getMemberSessions = async (req, res) => {
       `
       SELECT
         s.id AS session_id,
-
         DATE_FORMAT(s.session_date, '%Y-%m-%d') AS session_date,
         TIME_FORMAT(s.session_time, '%h:%i %p') AS session_time,
-
         s.duration_minutes,
         s.status,
         s.notes,
-
-        u.full_name AS trainer_name,
+        -- We alias the users table as 't' for Trainer
+        t.full_name AS trainer_name,
         tp.specialty AS trainer_specialty
-
       FROM sessions s
-      JOIN users u 
-        ON s.trainer_user_id = u.id
-        AND u.role = 'trainer'
-      LEFT JOIN trainer_profiles tp 
-        ON tp.user_id = u.id
-
+      -- Join specifically on the trainer_user_id to get the Trainer's info
+      INNER JOIN users t ON s.trainer_user_id = t.id
+      LEFT JOIN trainer_profiles tp ON tp.user_id = t.id
+      -- Filter by the logged-in member
       WHERE s.member_user_id = ?
       ORDER BY s.session_date DESC, s.session_time DESC
       `,
