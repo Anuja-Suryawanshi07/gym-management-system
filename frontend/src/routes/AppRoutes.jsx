@@ -1,6 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./ProtectedRoute";
-import MainLayout from "../layouts/MainLayout"; // The new consolidated layout
+import MainLayout from "../layouts/MainLayout"; 
 import PublicLayout from "../layouts/PublicLayout";
 /* Public Pages */
 import Landing from "../features/landing/Landing";
