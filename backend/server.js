@@ -16,7 +16,7 @@ const planRoutes = require("./routes/planRoutes");
 // --- CORS CONFIGURATION ---
 // This tells the browser that requests from your frontend origin are allowed
 app.use(cors({
-  origin: 'http://localhost:5173', 
+  origin: '*', 
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -83,8 +83,8 @@ app.get('/', (req, res) => {
 
 
 
-app.listen(PORT, () => {
-    console.log(`Server is listening at http://localhost:${PORT}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server is listening at http://0.0.0.0:${PORT}`);
 });
 
 

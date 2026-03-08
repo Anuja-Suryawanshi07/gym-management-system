@@ -65,8 +65,8 @@ exports.createCheckoutSession = async (req, res) => {
                 member_id: memberUserId,
                 plan_id: plan_id
             },
-            success_url: 'http://localhost:5173/payment-success',
-            cancel_url: 'http://localhost:5173/payment-cancel'
+            success_url: 'http://gym-management-frontend-anuja.s3-website.eu-north-1.amazonaws.com/payment-success',
+            cancel_url: 'http://gym-management-frontend-anuja.s3-website.eu-north-1.amazonaws.com/payment-cancel'
         });
 
         res.status(200).json({
