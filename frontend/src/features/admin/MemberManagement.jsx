@@ -40,7 +40,7 @@ const MemberManagement = () => {
   const fetchMembers = async () => {
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:7000/api/users/members");
+      const response = await fetch("http://16.171.11.83:7000/api/users/members");
       const data = await response.json();
       if (response.ok) {
         setMembers(data.members || []);
@@ -60,7 +60,7 @@ const MemberManagement = () => {
     setFeedback({ type: "", message: "" });
 
     try {
-      const response = await fetch("http://localhost:7000/api/users/register", {
+      const response = await fetch("http://16.171.11.83:7000/api/users/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...formData, role: "Member" }),
