@@ -5,7 +5,7 @@ const { authenticate }  = require('../middleware/authMiddleware');
 
 // Webhook 
 router.post(
-    '/Webhook',
+    '/webhook',
     paymentController.handleStripeWebhook
 );
 
