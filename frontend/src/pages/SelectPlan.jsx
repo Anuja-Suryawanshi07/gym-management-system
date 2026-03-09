@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../services/api";
 
 export default function SelectPlan() {
   const [plans, setPlans] = useState([]);
@@ -13,23 +13,14 @@ export default function SelectPlan() {
         const token = localStorage.getItem("gym_auth_token");
 
         // ✅ Get all plans
-        const plansRes = await axios.get(
-          "http://localhost:7000/api/plans"
-        );
+        const plansRes = await api.get("/plans");
 
         console.log("Plans:", plansRes.data); // Debug
 
         setPlans(plansRes.data);
 
         // ✅ Get member profile
-        const memberRes = await axios.get(
-          "http://localhost:7000/api/member/profile",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        const memberRes = await api.get("/member/profile");
 
         setCurrentPlanId(memberRes.data.active_plan_id);
       } catch (err) {
@@ -56,18 +47,13 @@ export default function SelectPlan() {
     try {
       const token = localStorage.getItem("gym_auth_token");
 
-      const res = await axios.post(
-        "http://localhost:7000/api/payments/create-checkout-session",
-        {
-          plan_id: selectedPlanId,
-          payment_method: "Stripe",
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const res = await api.post(
+  "/payments/create-checkout-session",
+  {
+    plan_id: selectedPlanId,
+    payment_method: "Stripe",
+  }
+);
 
       window.location.href = res.data.checkoutUrl;
     } catch (err) {
