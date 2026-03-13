@@ -1,20 +1,28 @@
-# 🏋️‍♀️ Gym Management System
+# 🏋️‍♀️ Gym Management System 
 
 A modern full-stack web application built to streamline gym operations — from managing members and trainers to handling sessions, attendance, and secure online payments.
 
 The system provides dedicated dashboards for **Admin, Trainer, and Member**, ensuring smooth and efficient gym management.
 
+✅ **Deployed on AWS:**
+
+• Frontend hosted on AWS S3
+• Backend deployed on AWS EC2
+• Database deployed on Aurora and RDS
+• Process management using PM2
+
+[gym-management-frontend-anuja.s3-website.eu-north-1.amazonaws.com](http://gym-management-frontend-anuja.s3-website.eu-north-1.amazonaws.com)
+
+
 ---
 
 ## 📂 Project Structure
-
-```
 gym-management-system/
 │
-├── frontend/     → React (Vite + Tailwind CSS)
-├── backend/      → Node.js + Express API
-└── database/     → MySQL schema & tables
-```
+├── frontend/ → React (Vite + Tailwind CSS)
+├── backend/ → Node.js + Express API
+└── database/ → MySQL schema & tables
+
 
 ---
 
@@ -52,11 +60,8 @@ gym-management-system/
 
 ```sql
 CREATE DATABASE gym_management;
-```
 
-3. Import the provided SQL schema to create required tables.
-
----
+3.Import the provided SQL schema to create required tables.
 
 ## 2️⃣ Backend Setup
 
@@ -64,9 +69,6 @@ Navigate to backend folder:
 
 ```bash
 cd backend
-```
-
-### Create `.env` file
 
 ```env
 DB_HOST=localhost
@@ -199,18 +201,18 @@ Stripe Webhooks are used to:
 
 # 🚀 Future Enhancements
 
-- Email notifications
-- Advanced analytics dashboard
-- Role-based access control improvements
-- Docker support
-- Cloud deployment support
-
+- Email notifications for members and trainers
+- Advanced analytics and reporting dashboard
+- Improved role-based access control and permissions
+- Mobile-friendly / PWA support
+- Additional payment gateways
+- Continuous deployment (CI/CD) setup for automatic updates
 ---
 
 # 👩‍💻 Author
 
 **Anuja Suryawanshi**  
-Full-Stack Web Developer  
+Full-Stack Web Developer   
 
 ---
 
