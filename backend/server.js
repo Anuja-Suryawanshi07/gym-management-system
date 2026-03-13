@@ -12,6 +12,9 @@ const membershipRequestRoutes = require("./routes/membershipRequestRoutes");
 const paymentRoutes = require('./routes/paymentRoutes');
 const planRoutes = require("./routes/planRoutes");
 
+//Middleware to parse JSON bodies
+app.use(express.json());
+
 
 // --- CORS CONFIGURATION ---
 // This tells the browser that requests from your frontend origin are allowed
@@ -21,11 +24,12 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
+
+
+
 // payment route
 app.use('/api/payments/webhook', express.raw({ type: "application/json" }), paymentRoutes);
 
-//Middleware to parse JSON bodies
-app.use(express.json());
 
 app.use('/api/payments', paymentRoutes);
 app.use("/api/plans", planRoutes);

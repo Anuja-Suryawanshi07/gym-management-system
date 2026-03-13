@@ -123,12 +123,12 @@ router.put(
 );
 
 router.put(
-    "/members/:id/membershipdate",
+    "/members/:user_id/membershipdate",
     authenticate,
     isAdmin,
     updateMembershipDates
 );
-
+//router.put('/members/:id/membershipdate', updateMembershipDates);
 router.post(
     "/members/:id/remind-payment",
     authenticate,

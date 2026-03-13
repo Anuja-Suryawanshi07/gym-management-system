@@ -1147,10 +1147,11 @@ exports.getPlans = async (req, res) => {
 };
 
 exports.updateMembershipDates = async (req, res) => {
-    const { id } = req.params;
+    const { user_id } = req.params;
     const { membership_start_date, membership_end_date } = req.body;
   //console.log("REQ BODY:", req.body);
   console.log("HIT MEMBERSHIP DATE ROUTE", req.params, req.body);
+  console.log("DEBUG:", { user_id, membership_start_date, membership_end_date });
 
     // Validation
   if (!membership_start_date || !membership_end_date) {
@@ -1164,7 +1165,7 @@ exports.updateMembershipDates = async (req, res) => {
       `UPDATE member_profiles
        SET membership_start_date = ?, membership_end_date = ?
        WHERE user_id = ?`,
-      [membership_start_date, membership_end_date, id]
+      [membership_start_date, membership_end_date, user_id]
     );
 
     if (result.affectedRows === 0) {
