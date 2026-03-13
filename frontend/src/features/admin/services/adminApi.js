@@ -44,14 +44,15 @@ export const updateMemberStatus = (userId, status) =>
     membership_status: status
   });  
 
-export const updateMembershipDates = (userId, dates) =>
-  axios.put(`/admin/members/${userId}/membershipdate`, {
-    membership_start_date: dates.startDate,
-    membership_end_date: dates.endDate
-  });
-
+export const updateMembershipDates = (userId, data) =>
+  axios.put(`/admin/members/${userId}/membershipdate`, data);
+// {
+//     membership_start_date: dates.startDate,
+//     membership_end_date: dates.endDate
+//   });
+// axios.put(`/admin/members/${userId}/membershipdate`, data);
   export const sendPaymentReminder = (userId) =>
-    axios.post(`/admin/ members/${userId}/remind-payment`);
+    axios.post(`/admin/members/${userId}/remind-payment`);
 
   export const getAllTrainers = () =>
     axios.get("/admin/trainers");

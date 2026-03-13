@@ -97,6 +97,12 @@ export default function MemberDetails() {
 
     try {
       setDateLoading(true);
+       console.log("Start Date:", startDate);
+    console.log("End Date:", endDate);
+    console.log("Payload:", {
+      membership_start_date: startDate,
+      membership_end_date: endDate,
+    });
       await updateMembershipDates(id, {
         membership_start_date: startDate,
         membership_end_date: endDate,
