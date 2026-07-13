@@ -18,12 +18,12 @@ const MemberManagement = () => {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [isModalOpen, setModalOpen] = useState("false");
+  // FIX: Changed "false" (string) to false (boolean) so modal logic works correctly
+  const [isModalOpen, setModalOpen] = useState(false); 
   const [actionLoading, setActionLoading] = useState(false);
   const [feedback, setFeedback] = useState({ type: "", message: "" });
 
   // New Member From State
-
   const [formData, setFormData] = useState({
     full_name: "",
     email: "",
@@ -40,7 +40,8 @@ const MemberManagement = () => {
   const fetchMembers = async () => {
     setLoading(true);
     try {
-      const response = await fetch("http://16.171.11.83:7000/api/users/members");
+      // FIX: Replaced hardcoded AWS IP with environment variable template literal
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/users/members`);
       const data = await response.json();
       if (response.ok) {
         setMembers(data.members || []);
@@ -60,7 +61,8 @@ const MemberManagement = () => {
     setFeedback({ type: "", message: "" });
 
     try {
-      const response = await fetch("http://16.171.11.83:7000/api/users/register", {
+      // FIX: Replaced hardcoded AWS IP with environment variable template literal
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/users/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...formData, role: "Member" }),
@@ -107,7 +109,7 @@ const MemberManagement = () => {
           </p>
         </div>
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => setModalOpen(true)}
           className="flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-blue-100 transition-all active:scale-95"
         >
           <UserPlus size={20} />
@@ -243,7 +245,7 @@ const MemberManagement = () => {
           <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
             <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
               <h3 className="text-xl font-black text-gray-800 tracking-tight">Add New Member</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
+              <button onClick={() => setModalOpen(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
                 <X size={24} />
               </button>
             </div>

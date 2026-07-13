@@ -6,6 +6,7 @@ function RequestMembership() {
         fullName: "",
         email: "",
         phone: "",
+        password: "", 
         goal: "",
     });
 
@@ -27,12 +28,14 @@ function RequestMembership() {
                 full_name: formData.fullName,
                 email: formData.email,
                 phone: formData.phone,
+                password: formData.password, // Added password to API payload
                 message: formData.goal,
             });
             setSubmitted(true);
         } catch (err) {
             setError(err.response?.data?.message || "Failed to submit request");
         } finally {
+            loading=false;
             setLoading(false);
         }
     };
@@ -92,16 +95,32 @@ function RequestMembership() {
                     </div>
                 </div>
 
-                <div className="mb-4">
-                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-2">Phone Number</label>
-                    <input 
-                        type="text"
-                        name="phone"
-                        required
-                        value={formData.phone}
-                        onChange={handleChange}
-                        className="w-full bg-gray-800 border border-gray-700 px-4 py-3 rounded-xl focus:ring-2 focus:ring-yellow-500 text-white outline-none"
-                    />
+                {/* Grouped Phone and Password into a responsive 2-column row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase mb-2">Phone Number</label>
+                        <input 
+                            type="text"
+                            name="phone"
+                            required
+                            value={formData.phone}
+                            onChange={handleChange}
+                            className="w-full bg-gray-800 border border-gray-700 px-4 py-3 rounded-xl focus:ring-2 focus:ring-yellow-500 text-white outline-none"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase mb-2">Password</label>
+                        <input 
+                            type="password"
+                            name="password"
+                            required
+                            placeholder="••••••••"
+                            value={formData.password}
+                            onChange={handleChange}
+                            className="w-full bg-gray-800 border border-gray-700 px-4 py-3 rounded-xl focus:ring-2 focus:ring-yellow-500 text-white outline-none"
+                        />
+                    </div>
                 </div>
 
                 <div className="mb-6">

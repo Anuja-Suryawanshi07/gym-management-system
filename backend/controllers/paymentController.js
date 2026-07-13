@@ -65,8 +65,9 @@ exports.createCheckoutSession = async (req, res) => {
                 member_id: memberUserId,
                 plan_id: plan_id
             },
-            success_url: "http://gym-management-frontend-anuja.s3-website.eu-north-1.amazonaws.com/payment-success",
-            cancel_url: "http://gym-management-frontend-anuja.s3-website.eu-north-1.amazonaws.com/payment-cancel"
+            // FIX: Uses process.env.FRONTEND_URL dynamically for redirect locations
+            success_url: `${process.env.FRONTEND_URL}/payment-success`,
+            cancel_url: `${process.env.FRONTEND_URL}/payment-cancel`
         });
 
         res.status(200).json({
@@ -89,7 +90,7 @@ exports.handleStripeWebhook = async (req, res) => {
 
   try {
     event = stripe.webhooks.constructEvent(
-      req.body,
+      req.rawBody,
       sig,
       process.env.STRIPE_WEBHOOK_SECRET
     );
@@ -160,4 +161,3 @@ exports.handleStripeWebhook = async (req, res) => {
 
   res.status(200).json({ received: true });
 };
-
