@@ -104,10 +104,19 @@ exports.register = async (req, res) => {
 // --- Login Function ---
 // Route: POST /api/auth/login
 exports.login = async (req, res) => {
-    console.log("Login attempt received!");
+    console.log("--- LOGIN DEBUG START ---");
+    console.log("Raw Payload Body:", req.body);
+    console.log("Received Password Type:", typeof req.body.password);
+    if (req.body.password) {
+        console.log("Received Password Length:", req.body.password.length);
+        console.log("Trimmed Password Length:", req.body.password.trim().length);
+    }
+    console.log("--- LOGIN DEBUG END ---");
+    //console.log("Login attempt received!");
     const { email, password } = req.body;
 
     if (!email || !password) {
+
         return res.status(400).json({ message: "Email and password are required." });
     }
 
