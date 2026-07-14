@@ -1,7 +1,11 @@
 import axios from "axios";
 
+const isProduction = import.meta.env.MODE === "production";
+
 const instance = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || "http://localhost:7000/api",
+    baseURL: isProduction
+        ? "https://gym-management-system-production-474f.up.railway.app/api" 
+        : "http://localhost:7000/api",
     headers: { 
         "Content-Type": "application/json"
     }
