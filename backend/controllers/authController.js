@@ -135,6 +135,16 @@ exports.login = async (req, res) => {
         const user = userRows[0];
 
         // 2. Compare password with clean trimming
+        console.log("--- BCRYPT RUNTIME VERIFICATION ---");
+const freshTestHash = await bcrypt.hash("tara123", 10);
+console.log("Freshly generated hash for 'tara123' on this server:", freshTestHash);
+
+const inlineMatchTest = await bcrypt.compare("tara123", freshTestHash);
+console.log("Does the server match its own fresh hash?:", inlineMatchTest);
+
+const databaseMatchTest = await bcrypt.compare("tara123", user.password_hash);
+console.log("Does the server match the database hash?:", databaseMatchTest);
+console.log("-------------------------------------");
         const passwordMatch = await bcrypt.compare(password.trim(), user.password_hash);
         if (!passwordMatch) {
             return res.status(401).json({ message: "Invalid email or password." });
