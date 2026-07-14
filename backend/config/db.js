@@ -1,31 +1,31 @@
 const mysql = require('mysql2');
-require('dotenv').config(); // Load environment variables
+require('dotenv').config();
 
 // Create the connection pool
 const pool = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME, // gym_management_system
-    port: process.env.DB_PORT,
+    database: process.env.DB_NAME, 
+    port: process.env.DB_PORT || 3306,
     waitForConnections: true,
     connectionLimit: 10,
-    queueLimit: 0
+    queueLimit: 0,
+    enableKeepAlive: true, 
+    keepAliveInitialDelay: 10000 
 });
 
-// Get the promise-based connection pool
+// Get the promise-based connection pool wrapper
 const promisePool = pool.promise();
 
-// Optional: Test the connection when the pool is created
-promisePool.getConnection()
-    .then(connection => {
-        console.log('✅ Connected to the MySQL database!');
-        connection.release(); // Release the connection back to the pool
-    })
-    .catch(err => {
-        console.error('❌ Database connection failed:', err.message);
-    });
+// Clean event listeners to log status without breaking the pool stream
+pool.on('connection', () => {
+    console.log('🔄 New database connection initialized in pool');
+});
 
+pool.on('error', (err) => {
+    console.error('❌ Database Pool Error:', err.message);
+});
 
-// Export the pool to be used in routes/controllers
+// Export the pool safely
 module.exports = promisePool;
