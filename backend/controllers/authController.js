@@ -112,9 +112,9 @@ exports.login = async (req, res) => {
     }
 
     try {
-        // 1. Find user
+        // 1. Find user from core table
         const [userRows] = await db.execute(
-            "SELECT id, email, password_hash, full_name, role FROM users WHERE email = ?",
+            "SELECT id, email, password_hash, full_name FROM users WHERE email = ?",
             [email]
         );
         console.log("User from DB:", userRows);
@@ -125,13 +125,13 @@ exports.login = async (req, res) => {
 
         const user = userRows[0];
 
-        // 2. Compare password
-        const passwordMatch = await bcrypt.compare(password, user.password_hash);
+        // 2. Compare password with clean trimming
+        const passwordMatch = await bcrypt.compare(password.trim(), user.password_hash);
         if (!passwordMatch) {
             return res.status(401).json({ message: "Invalid email or password." });
         }
 
-        // 3. Fetch role properly
+        // 3. Fetch real role mapping from join table
         const [roleRows] = await db.execute(
             `
             SELECT r.role_name
@@ -142,34 +142,34 @@ exports.login = async (req, res) => {
             [user.id]
         );
 
-        const role = roleRows.length > 0
+        const assignedRole = roleRows.length > 0
             ? roleRows[0].role_name.toLowerCase()
-            : "unassigned";
+            : "member"; 
 
-        // 4. Generate JWT
+        // 4. Generate JWT with the aligned role variable
         const token = jwt.sign(
-            { id: user.id,
-             email: user.email,
-             role: user.role 
+            { 
+                id: user.id,
+                email: user.email,
+                role: assignedRole 
             },
             process.env.JWT_SECRET,
             { expiresIn: "1d" }
         );
-        console.log("JWT Payload:", {
-  id: user.id,
-  email: user.email,
-  role: user.role
-});
-            
+        
+        console.log("JWT Payload Built:", {
+            id: user.id,
+            email: user.email,
+            role: assignedRole
+        });
 
-
-        // 5. Respond
+        // 5. Respond to Vercel Frontend
         res.status(200).json({
             message: "Login successful",
             user: {
                 id: user.id,
                 full_name: user.full_name,
-                role: user.role,
+                role: assignedRole,
             },
             token,
         });
