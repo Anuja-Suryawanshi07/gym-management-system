@@ -89,8 +89,9 @@ exports.handleStripeWebhook = async (req, res) => {
   let event;
 
   try {
+    const bodyToVerify = req.rawBody || req.body;
     event = stripe.webhooks.constructEvent(
-      req.rawBody,
+      bodyToVerify,
       sig,
       process.env.STRIPE_WEBHOOK_SECRET
     );
